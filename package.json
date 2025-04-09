@@ -2,9 +2,21 @@
   "name": "tss-router",
   "version": "0.0.1",
   "description": "TypeSafe Simple Router",
-  "main": "dist/index.js",
+  "sideEffects": false,
+
+  "main": "./cjs/index.js",
+  "module": "./esm/index.js",
+  "types": "./esm/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "yarn build:cjs && yarn build:esm",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json"
   },
   "keywords": [
     "TypeScript",
