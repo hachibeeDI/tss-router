@@ -74,7 +74,6 @@ export function urlBuilder<const Path extends string>(path: Path, params: PathPa
     .split('/')
     .map((x) => {
       if (x.startsWith(PLACEHOLDER)) {
-        console.log(x);
         const key = x.replace(PLACEHOLDER, '');
         return (params as any)[key];
       }

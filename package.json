@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "TypeSafe Simple Router",
   "sideEffects": false,
-
   "main": "./cjs/index.js",
   "module": "./esm/index.js",
   "types": "./esm/index.d.ts",
@@ -11,9 +10,17 @@
     "dist",
     "src"
   ],
-
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+
+    "check:type": "tsc --noEmit",
+    "check:lint": "biome lint src/ --vcs-use-ignore-file=true",
+    "check:style": "biome format src/ --vcs-use-ignore-file=true",
+    "check-all": "npm run check:lint && npm run check:style",
+    "fix:lint": "npm run check:lint -- --write",
+    "fix:style": "npm run check:style --write",
+    "fix-all": "npm run fix:style && npm run fix:lint",
+
     "build": "yarn build:cjs && yarn build:esm",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json"
@@ -24,5 +31,17 @@
     "Router"
   ],
   "author": "OGURA Daiki",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "dependencies": {
+    "history": "^5.3.0"
+  }
 }
