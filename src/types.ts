@@ -33,7 +33,7 @@ type PathMatcher = {
  */
 export type Routing<Path extends string> = {
   path: Path;
-  match: PathMatcher;
+  match: (pathname: string) => boolean;
   render: (args: PathParser<Path>) => ReactNode;
   buildUrl: (args: PathParser<Path>) => string;
 };

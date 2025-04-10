@@ -71,7 +71,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
     return this as any;
   }
 
-  public buildUrl<const Key extends string, const Path extends string>(key: Key, args: PathParser<Path>): string {
+  public buildUrl<const Key extends string>(key: Key, args: PathParser<Routings[Key]['path']>): string {
     return (this.routings as any)[key].buildUrl(args);
   }
 
@@ -125,8 +125,15 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
     return function useRouteOperation() {
       const histCtx = useHistory();
 
-      return <const Key extends keyof Routings>(key: Key, ...[args]: AsOptionalArgsIf<PathParser<Routings[Key]['path']>>): void => {
-        const url = router.buildUrl(key as string, args as any);
+      return <const Key extends Extract<keyof Routings, string>>(
+        key: Key,
+        ...[args]: AsOptionalArgsIf<PathParser<Routings[Key]['path']>>
+      ): void => {
+        const url = router.buildUrl(
+          key,
+          // Limit of type inference
+          (args ?? {}) as any,
+        );
         histCtx[operation](url);
       };
     };
@@ -152,7 +159,11 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
         // biome-ignore lint/a11y/useValidAnchor: I know what I'm doing
         onClick={(e) => {
           e.preventDefault();
-          const url = router.buildUrl(route, args as any);
+          const url = router.buildUrl(
+            route,
+            // Limit of type inference
+            (args ?? {}) as any,
+          );
           histCtx.push(url);
         }}
       />

@@ -1,10 +1,10 @@
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
-import {buildRoute, pathMatcherFactory, urlBuilder} from './algo';
+import {buildRoute, pathAlgorithmFactory} from './algo';
 
 describe('matcher', () => {
   test('test plain', () => {
-    const plainMatcher = pathMatcherFactory('/foo/bar/baz');
+    const plainMatcher = pathAlgorithmFactory('/foo/bar/baz');
 
     expect(plainMatcher.match('/foo')).toBeFalsy();
     expect(plainMatcher.match('/foo/bar')).toBeFalsy();
@@ -15,7 +15,7 @@ describe('matcher', () => {
   });
 
   test('test simple args', () => {
-    const simpleArgMatcher = pathMatcherFactory('/hoge/:id');
+    const simpleArgMatcher = pathAlgorithmFactory('/hoge/:id');
     expect(simpleArgMatcher.match('/foo/abcs')).toBeFalsy();
     expect(simpleArgMatcher.match('/hoge')).toBeFalsy();
 
@@ -26,7 +26,7 @@ describe('matcher', () => {
   });
 
   test('complex args', () => {
-    const complArgsMat = pathMatcherFactory('/hoge/:id/leef/:leefId');
+    const complArgsMat = pathAlgorithmFactory('/hoge/:id/leef/:leefId');
     expect(complArgsMat.match('/foo/abcs')).toBeFalsy();
 
     expect(complArgsMat.match('/hoge')).toBeFalsy();
@@ -40,12 +40,12 @@ describe('matcher', () => {
 
 describe('url builder', () => {
   test('test plain', () => {
-    expect(urlBuilder('/foo/bar/baz', {})).toBe('/foo/bar/baz');
-    expect(urlBuilder('/foo/:bar/baz', {bar: 'oooo'})).toBe('/foo/oooo/baz');
-    expect(urlBuilder('/foo/bar/:baz', {baz: 'gagagga'})).toBe('/foo/bar/gagagga');
+    expect(pathAlgorithmFactory('/foo/bar/baz').urlBuilder({})).toBe('/foo/bar/baz');
+    expect(pathAlgorithmFactory('/foo/:bar/baz').urlBuilder({bar: 'oooo'})).toBe('/foo/oooo/baz');
+    expect(pathAlgorithmFactory('/foo/bar/:baz').urlBuilder({baz: 'gagagga'})).toBe('/foo/bar/gagagga');
 
     expect(
-      urlBuilder('/foo/:bar/leef/:baz/nandakana/:last', {
+      pathAlgorithmFactory('/foo/:bar/leef/:baz/nandakana/:last').urlBuilder({
         bar: 'wowo',
         baz: 'gagagga',
         last: 'final',
@@ -53,7 +53,7 @@ describe('url builder', () => {
     ).toBe('/foo/wowo/leef/gagagga/nandakana/final');
 
     expect(
-      urlBuilder('/foo/:bar/leef/:baz/nandakana/:last?token=token&id=id', {
+      pathAlgorithmFactory('/foo/:bar/leef/:baz/nandakana/:last?token=token&id=id').urlBuilder({
         bar: 'wowo',
         baz: 'gagagga',
         last: 'final',

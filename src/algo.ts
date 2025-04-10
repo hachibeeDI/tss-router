@@ -29,39 +29,39 @@ export function pathMatcherFactory<Path extends string>(path: Path) {
 
       return true;
     },
-  };
-}
 
-export function urlBuilder<const Path extends string>(path: Path, params: PathParser<Path>): string {
-  let paramPart = '';
-  if ('$search' in params && params.$search != null) {
-    paramPart = `?${Object.entries(params.$search)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('&')}`;
-  }
-
-  // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  const pathname = path.split('?')[0]!;
-
-  const builtPathname = pathname
-    .split('/')
-    .map((x) => {
-      if (x.startsWith(PLACEHOLDER)) {
-        const key = x.replace(PLACEHOLDER, '');
-        return (params as any)[key];
+    urlBuilder: (params: PathParser<Path>) => {
+      let paramPart = '';
+      if ('$search' in params && params.$search != null) {
+        paramPart = `?${Object.entries(params.$search)
+          .map(([k, v]) => `${k}=${v}`)
+          .join('&')}`;
       }
-      return x;
-    })
-    .join('/');
-  return `${builtPathname}${paramPart}`;
+
+      // biome-ignore lint/style/noNonNullAssertion: <explanation>
+      const pathname = path.split('?')[0]!;
+
+      const builtPathname = pathname
+        .split('/')
+        .map((x) => {
+          if (x.startsWith(PLACEHOLDER)) {
+            const key = x.replace(PLACEHOLDER, '');
+            return (params as any)[key];
+          }
+          return x;
+        })
+        .join('/');
+      return `${builtPathname}${paramPart}`;
+    },
+  };
 }
 
 export function buildRoute<const Path extends string>(path: Path, render: (args: PathParser<Path>) => ReactNode): Routing<Path> {
   const matcher = pathMatcherFactory(path);
   return {
     path,
-    match: matcher,
+    match: matcher.match,
+    buildUrl: matcher.urlBuilder,
     render,
-    buildUrl: (args) => urlBuilder(path, args),
   };
 }
