@@ -8,14 +8,12 @@ import '@testing-library/jest-dom/vitest';
 
 import {RouteProvider, useRouter, route, routingHooksFactory} from './index';
 
-const _DUMMY_HOST = 'https://hoge.com';
-
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
     .add('test', '/act/:foo/hoge/:bar/baz', (args) => (
       <div>
         <div>This is test1</div>
-        <div>{`${args.foo + args.bar}`}</div>
+        <div>{`${args.foo} + ${args.bar}`}</div>
       </div>
     ))
     .add('test2', '/abcdef', (_args) => <div>This is test2</div>);
@@ -64,7 +62,8 @@ describe('route', () => {
 
     expect(history.index).toBe(1);
 
-    expect(await screen.queryByText('This is root page')).toBeInTheDocument();
+    expect(history.location.pathname).toBe('/act/a/hoge/hgoe/baz');
+    expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test1')).toBeInTheDocument();
   });
 });
