@@ -9,7 +9,6 @@
   "files": ["dist", "src"],
   "scripts": {
     "test": "vitest run",
-
     "check:type": "tsc --noEmit",
     "check:lint": "biome lint src/ --vcs-use-ignore-file=true",
     "check:style": "biome format src/ --vcs-use-ignore-file=true",
@@ -17,7 +16,6 @@
     "fix:lint": "npm run check:lint -- --write",
     "fix:style": "npm run check:style --write",
     "fix-all": "npm run fix:style && npm run fix:lint",
-
     "build": "yarn build:cjs && yarn build:esm",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json"
@@ -27,6 +25,7 @@
   "license": "ISC",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.2",
     "react": "^19.1.0",
