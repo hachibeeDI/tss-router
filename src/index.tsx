@@ -30,109 +30,28 @@
  * ```
  */
 
-import type {ReactNode} from 'react';
+import {AssertionError} from 'assert';
 
-const PLACEHOLDER = ':';
-type PLACEHOLDER = typeof PLACEHOLDER;
+import type {ComponentProps, ReactNode} from 'react';
+import React, {createContext, use, useSyncExternalStore} from 'react';
+import type {History} from 'history';
 
-type ParseQueryParam<Parampath extends string> = Parampath extends `${infer Key}=${string}&${infer Rests}`
-  ? {[k in Key]: string} & ParseQueryParam<Rests>
-  : Parampath extends `${infer Key}=${string}`
-    ? {[k in Key]: string}
-    : never;
+import {buildRoute} from './algo';
+import type {PathParser, Routing} from './types';
 
-type BuildParam<Keys extends string> = {[k in Keys]: string};
+type AsOptionalArgsIf<T> = keyof T extends never ? [] : [T];
 
-type BodyParser<Path extends string> = Path extends `${string}/${PLACEHOLDER}${infer P}/${infer Rests}`
-  ? P | BodyParser<Rests>
-  : Path extends `${string}/${PLACEHOLDER}${infer P}`
-    ? P
-    : never;
+export class LocationNotFoundError extends Error {
+  public location: History['location'];
 
-type PathParser<Path extends string> = Path extends `${infer Uri}?${infer SParam}`
-  ? BuildParam<BodyParser<Uri>> & {
-      /** You must thought search path is optional */
-      $search: Partial<ParseQueryParam<SParam>>;
-    }
-  : BuildParam<BodyParser<Path>>;
-
-type PathMatcher = {
-  match: (target: URL) => boolean;
-};
-
-export function pathMatcherFactory<Path extends string>(path: Path) {
-  const definition = path.split('/');
-
-  return {
-    match: (target: URL) => {
-      // ignore search param
-      const targetPath = target.pathname.split('/');
-
-      if (targetPath.length !== definition.length) {
-        return false;
-      }
-
-      for (const i of targetPath.keys()) {
-        // biome-ignore lint/style/noNonNullAssertion: 100% sure
-        const def = definition[i]!;
-        if (def.startsWith(PLACEHOLDER)) {
-          continue;
-        }
-        // biome-ignore lint/style/noNonNullAssertion: 100% sure
-        const p = targetPath[i]!;
-
-        if (def !== p) {
-          return false;
-        }
-      }
-
-      return true;
-    },
-  };
-}
-
-export function urlBuilder<const Path extends string>(path: Path, params: PathParser<Path>): string {
-  let paramPart = '';
-  if ('$search' in params && params.$search != null) {
-    paramPart = `?${Object.entries(params.$search)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('&')}`;
+  constructor(location: History['location']) {
+    super(`Location ${location.pathname} is not found`);
+    this.location = location;
   }
-
-  // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  const pathname = path.split('?')[0]!;
-
-  const builtPathname = pathname
-    .split('/')
-    .map((x) => {
-      if (x.startsWith(PLACEHOLDER)) {
-        const key = x.replace(PLACEHOLDER, '');
-        return (params as any)[key];
-      }
-      return x;
-    })
-    .join('/');
-  return `${builtPathname}${paramPart}`;
 }
 
-/**
- * routing itself
- */
-type Routing<Path extends string> = {
-  path: Path;
-  match: PathMatcher;
-  render: (args: PathParser<Path>) => ReactNode;
-  buildUrl: (args: PathParser<Path>) => string;
-};
-
-export function buildRoute<const Path extends string>(path: Path, render: (args: PathParser<Path>) => ReactNode): Routing<Path> {
-  const matcher = pathMatcherFactory(path);
-  return {
-    path,
-    match: matcher,
-    render,
-    buildUrl: (args) => urlBuilder(path, args),
-  };
+export function isLocationNotFoundError(err: unknown): err is LocationNotFoundError {
+  return err instanceof LocationNotFoundError;
 }
 
 class Router<Routings extends Record<string, Routing<string>>> {
@@ -160,10 +79,13 @@ class Router<Routings extends Record<string, Routing<string>>> {
     return (this.routings as any)[key].buildUrl(args);
   }
 
-  public render(target: URL): ReactNode {
-    return Object.values(this.routings)
-      .find((routing) => routing.match.match(target))
-      ?.render(target);
+  public render(target: History['location']): ReactNode {
+    const found = Object.values(this.routings).find((routing) => routing.match.match(target.pathname));
+    if (found == null) {
+      throw new LocationNotFoundError(target);
+    }
+
+    return found.render(target);
   }
 }
 
@@ -171,6 +93,69 @@ export function route<const Key extends string, const Path extends string>(
   key: Key,
   path: Path,
   render: (args: PathParser<Path>) => ReactNode,
-): Router<{[key]: Routing<Path>}> {
-  return new Router({[key]: buildRoute(path, render)});
+): Router<Record<Key, Routing<Path>>> {
+  return new Router({[key]: buildRoute(path, render)} as Record<Key, Routing<Path>>);
+}
+
+const HistoryContext = createContext<{history: History} | null>(null);
+
+type RouteProviderProps = {
+  history: History;
+  children: ReactNode;
+};
+
+export function RouteProvider({history, children}: RouteProviderProps) {
+  return <HistoryContext.Provider value={{history}}>{children}</HistoryContext.Provider>;
+}
+
+export function useHistory(): History {
+  const ctx = use(HistoryContext);
+  if (ctx == null) {
+    throw new AssertionError({message: 'tss-router functions must be used within under a <RouteProvider /> Context.'});
+  }
+  return ctx?.history;
+}
+
+export function useLocation(): History['location'] {
+  const hist = useHistory();
+  return useSyncExternalStore(hist.listen, () => hist.location);
+}
+
+/**
+ *
+ */
+export function routingHooksFactory<Routings extends Record<string, Routing<string>>>(router: Router<Routings>) {
+  function createUseRouteOperation(operation: 'push' | 'replace') {
+    return function useRouteOperation() {
+      const histCtx = useHistory();
+
+      return <const Key extends keyof Routings>(key: Key, ...[args]: AsOptionalArgsIf<PathParser<Routings[Key]['path']>>): void => {
+        const url = router.buildUrl(key as string, args as any);
+        histCtx[operation](url);
+      };
+    };
+  }
+
+  type RouteProps<Key extends string> = keyof PathParser<Routings[Key]['path']> extends never
+    ? {route: Key}
+    : {
+        route: Key;
+        args: PathParser<Routings[Key]['path']>;
+      };
+
+  function Link<const Key extends Extract<keyof Routings, string>>(props: ComponentProps<'a'> & RouteProps<Key>) {
+    return <a {...props} />;
+  }
+
+  return {
+    useNavigate: createUseRouteOperation('push'),
+    useRedirect: createUseRouteOperation('replace'),
+    Link,
+  };
+}
+
+export function useRouter<Routings extends Record<string, Routing<string>>>(router: Router<Routings>) {
+  const loc = useLocation();
+
+  return router.render(loc);
 }
