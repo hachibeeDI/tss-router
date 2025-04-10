@@ -2,42 +2,39 @@ import {describe, expect, expectTypeOf, test} from 'vitest';
 
 import {buildRoute, pathMatcherFactory, urlBuilder} from './algo';
 
-const DUMMY_HOST = 'https://hoge.com';
-
 describe('matcher', () => {
   test('test plain', () => {
     const plainMatcher = pathMatcherFactory('/foo/bar/baz');
 
-    expect(plainMatcher.match(`${DUMMY_HOST}/foo`)).toBeFalsy();
-    expect(plainMatcher.match(`${DUMMY_HOST}/foo/bar`)).toBeFalsy();
+    expect(plainMatcher.match('/foo')).toBeFalsy();
+    expect(plainMatcher.match('/foo/bar')).toBeFalsy();
 
-    expect(plainMatcher.match(`${DUMMY_HOST}/foo/bar/baz`)).toBeTruthy();
+    expect(plainMatcher.match('/foo/bar/baz')).toBeTruthy();
 
-    expect(plainMatcher.match(`${DUMMY_HOST}/foo/bar/baz/hom`)).toBeFalsy();
+    expect(plainMatcher.match('/foo/bar/baz/hom')).toBeFalsy();
   });
 
   test('test simple args', () => {
     const simpleArgMatcher = pathMatcherFactory('/hoge/:id');
-    expect(simpleArgMatcher.match(`${DUMMY_HOST}/foo/abcs`)).toBeFalsy();
+    expect(simpleArgMatcher.match('/foo/abcs')).toBeFalsy();
+    expect(simpleArgMatcher.match('/hoge')).toBeFalsy();
 
-    expect(simpleArgMatcher.match(`${DUMMY_HOST}/hoge`)).toBeFalsy();
+    expect(simpleArgMatcher.match('/hoge/12345')).toBeTruthy();
 
-    expect(simpleArgMatcher.match(`${DUMMY_HOST}/hoge/12345`)).toBeTruthy();
-
-    expect(simpleArgMatcher.match(`${DUMMY_HOST}/hoge/abcdef/baz`)).toBeFalsy();
-    expect(simpleArgMatcher.match(`${DUMMY_HOST}/hoge/bar/baz/hom`)).toBeFalsy();
+    expect(simpleArgMatcher.match('/hoge/abcdef/baz')).toBeFalsy();
+    expect(simpleArgMatcher.match('/hoge/bar/baz/hom')).toBeFalsy();
   });
 
   test('complex args', () => {
     const complArgsMat = pathMatcherFactory('/hoge/:id/leef/:leefId');
-    expect(complArgsMat.match(`${DUMMY_HOST}/foo/abcs`)).toBeFalsy();
+    expect(complArgsMat.match('/foo/abcs')).toBeFalsy();
 
-    expect(complArgsMat.match(`${DUMMY_HOST}/hoge`)).toBeFalsy();
-    expect(complArgsMat.match(`${DUMMY_HOST}/hoge/12345`)).toBeFalsy();
-    expect(complArgsMat.match(`${DUMMY_HOST}/hoge/abcdef/baz`)).toBeFalsy();
-    expect(complArgsMat.match(`${DUMMY_HOST}/hoge/bar/baz/hom`)).toBeFalsy();
+    expect(complArgsMat.match('/hoge')).toBeFalsy();
+    expect(complArgsMat.match('/hoge/12345')).toBeFalsy();
+    expect(complArgsMat.match('/hoge/abcdef/baz')).toBeFalsy();
+    expect(complArgsMat.match('/hoge/bar/baz/hom')).toBeFalsy();
 
-    expect(complArgsMat.match(`${DUMMY_HOST}/hoge/bar/leef/hom`)).toBeTruthy();
+    expect(complArgsMat.match('/hoge/bar/leef/hom')).toBeTruthy();
   });
 });
 
