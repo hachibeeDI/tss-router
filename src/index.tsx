@@ -71,10 +71,6 @@ class Router<Routings extends Record<string, Routing<string>>> {
     return this as any;
   }
 
-  public match(target: URL): boolean {
-    return Object.values(this.routings).some((routing) => routing.match.match(target));
-  }
-
   public buildUrl<const Key extends string, const Path extends string>(key: Key, args: PathParser<Path>): string {
     return (this.routings as any)[key].buildUrl(args);
   }
@@ -85,7 +81,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
       throw new LocationNotFoundError(target);
     }
 
-    return found.render(target);
+    return found.render(target.pathname);
   }
 }
 
@@ -137,14 +133,30 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
   }
 
   type RouteProps<Key extends string> = keyof PathParser<Routings[Key]['path']> extends never
-    ? {route: Key}
+    ? {route: Key; args?: undefined}
     : {
         route: Key;
         args: PathParser<Routings[Key]['path']>;
       };
 
   function Link<const Key extends Extract<keyof Routings, string>>(props: ComponentProps<'a'> & RouteProps<Key>) {
-    return <a {...props} />;
+    const {href, route, args, ...rest} = props;
+    const histCtx = useHistory();
+    if (href) {
+      return <a {...rest} href={href} />;
+    }
+
+    return (
+      <a
+        {...rest}
+        // biome-ignore lint/a11y/useValidAnchor: I know what I'm doing
+        onClick={(e) => {
+          e.preventDefault();
+          const url = router.buildUrl(route, args as any);
+          histCtx.push(url);
+        }}
+      />
+    );
   }
 
   return {
