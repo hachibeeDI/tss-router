@@ -1,3 +1,35 @@
+/**
+ * sample:
+ * ```typescript
+ * import {createBrowserHistory} from 'history';
+ * import {route, useRouter, RouteProvider} from 'tss-router';
+ *
+ * const r = route('root', '/', (args) => {
+ *   return <div>`${args.foo + args.bar}`</div>;
+ * })
+ * .add('test', '/act/:foo/hoge', (args) => {
+ *   return <div>`${args.foo + args.bar}`</div>;
+ * })
+ * .add('test2', '/act/:foo/hoge/:bar/baz', (args) => {
+ *   return <div>`${args.foo + args.bar}`</div>;
+ * });
+ *
+ * funcion App() {
+ *   const route = useRouter(r);
+ *   return <div>{route}</div>;
+ * }
+ *
+ * function Main() {
+ *   const history = createBrowserHistory();
+ *   return (
+ *     <RouteProvider history={history}>
+ *       <App />
+ *     </RouteProvider>
+ *   );
+ * }
+ * ```
+ */
+
 import type {ReactNode} from 'react';
 
 const PLACEHOLDER = ':';
@@ -104,7 +136,7 @@ export function buildRoute<const Path extends string>(path: Path, render: (args:
 }
 
 class Router<Routings extends Record<string, Routing<string>>> {
-  private routings: Routings;
+  public routings: Routings;
   constructor(route: Routings) {
     this.routings = route;
   }
@@ -118,6 +150,20 @@ class Router<Routings extends Record<string, Routing<string>>> {
     (this.routings as any)[key] = buildRoute(path, render);
 
     return this as any;
+  }
+
+  public match(target: URL): boolean {
+    return Object.values(this.routings).some((routing) => routing.match.match(target));
+  }
+
+  public buildUrl<const Key extends string, const Path extends string>(key: Key, args: PathParser<Path>): string {
+    return (this.routings as any)[key].buildUrl(args);
+  }
+
+  public render(target: URL): ReactNode {
+    return Object.values(this.routings)
+      .find((routing) => routing.match.match(target))
+      ?.render(target);
   }
 }
 
