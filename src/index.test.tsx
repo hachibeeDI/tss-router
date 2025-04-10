@@ -1,8 +1,10 @@
-import React, {type ReactNode} from 'react';
+import React, {act, type ReactNode} from 'react';
 
 import {createMemoryHistory} from 'history';
-import {describe, expect, expectTypeOf, test} from 'vitest';
+import {describe, expect, test} from 'vitest';
 import {render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
 
 import {RouteProvider, useRouter, route, routingHooksFactory} from './index';
 
@@ -16,22 +18,31 @@ describe('route', () => {
         <div>{`${args.foo + args.bar}`}</div>
       </div>
     ))
-    .add('test2', '/', (_args) => <div>This is test2</div>);
+    .add('test2', '/abcdef', (_args) => <div>This is test2</div>);
   const {Link, useNavigate} = routingHooksFactory(router);
 
   test('works fine', async () => {
+    const history = createMemoryHistory();
     function Root({children}: {children: ReactNode}) {
-      const history = createMemoryHistory();
       return <RouteProvider history={history}>{children}</RouteProvider>;
     }
 
     function App() {
       const r = useRouter(router);
+      const nav = useNavigate();
       return (
         <div>
           <Link route="test" args={{foo: 'a', bar: 'hgoe'}}>
-            aaaa
+            decent anchor
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              nav('test2');
+            }}
+          >
+            button test
+          </button>
           {r}
         </div>
       );
@@ -43,7 +54,17 @@ describe('route', () => {
       </Root>,
     );
 
-    expect(await screen.findByText('This is root page')).toBeTruthy();
-    expect(await screen.queryByText('This is test1')).toBeFalsy();
+    expect(await screen.findByText('This is root page')).toBeInTheDocument();
+    expect(await screen.queryByText('This is test1')).not.toBeInTheDocument();
+    expect(history.index).toBe(0);
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('decent anchor'));
+    });
+
+    expect(history.index).toBe(1);
+
+    expect(await screen.queryByText('This is root page')).toBeInTheDocument();
+    expect(await screen.queryByText('This is test1')).toBeInTheDocument();
   });
 });
