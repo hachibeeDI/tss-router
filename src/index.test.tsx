@@ -1,6 +1,6 @@
 import {describe, expect, expectTypeOf, test} from 'vitest';
 
-import {buildRoute, pathMatcherFactory, urlBuilder} from './index';
+import {buildRoute, pathMatcherFactory, urlBuilder, route} from './index';
 
 const DUMMY_HOST = 'https://hoge.com';
 
@@ -10,7 +10,9 @@ describe('matcher', () => {
 
     expect(plainMatcher.match(new URL(`${DUMMY_HOST}/foo`))).toBeFalsy();
     expect(plainMatcher.match(new URL(`${DUMMY_HOST}/foo/bar`))).toBeFalsy();
+
     expect(plainMatcher.match(new URL(`${DUMMY_HOST}/foo/bar/baz`))).toBeTruthy();
+
     expect(plainMatcher.match(new URL(`${DUMMY_HOST}/foo/bar/baz/hom`))).toBeFalsy();
   });
 
@@ -19,7 +21,9 @@ describe('matcher', () => {
     expect(simpleArgMatcher.match(new URL(`${DUMMY_HOST}/foo/abcs`))).toBeFalsy();
 
     expect(simpleArgMatcher.match(new URL(`${DUMMY_HOST}/hoge`))).toBeFalsy();
+
     expect(simpleArgMatcher.match(new URL(`${DUMMY_HOST}/hoge/12345`))).toBeTruthy();
+
     expect(simpleArgMatcher.match(new URL(`${DUMMY_HOST}/hoge/abcdef/baz`))).toBeFalsy();
     expect(simpleArgMatcher.match(new URL(`${DUMMY_HOST}/hoge/bar/baz/hom`))).toBeFalsy();
   });
@@ -85,5 +89,15 @@ describe('url builder', () => {
         return `${args.$search.token}, ${args.$search.foo}, ${args.foo}, ${args.bar}`;
       });
     });
+  });
+});
+
+describe('route', () => {
+  test('works fine', () => {
+    const router = route('test', '/act/:foo/hoge/:bar/baz', (args) => {
+      return `${args.foo + args.bar}`;
+    });
+
+    router.routings.test.match.match(new URL(`${DUMMY_HOST}/act/foo/hoge/bar/baz`));
   });
 });
