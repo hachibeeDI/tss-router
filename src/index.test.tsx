@@ -13,10 +13,16 @@ describe('route', () => {
     .add('test', '/act/:foo/hoge/:bar/baz', (args) => (
       <div>
         <div>This is test1</div>
-        <div>{`${args.foo} + ${args.bar}`}</div>
+        <div>{`foo=${args.foo}, bar=${args.bar}`}</div>
       </div>
     ))
-    .add('test2', '/abcdef', (_args) => <div>This is test2</div>);
+    .add('test2', '/abcdef', (_args) => <div>This is test2</div>)
+    .add('test3', '/root/:abuba/ro/:foo', (args) => (
+      <div>
+        <div>This is test3</div>
+        <div>foo={args.foo}, abuba={args.abuba}</div>
+      </div>
+    ));
   const {Link, useNavigate} = routingHooksFactory(router);
 
   test('works fine', async () => {
@@ -39,7 +45,16 @@ describe('route', () => {
               nav('test2');
             }}
           >
-            button test
+            button to navigate test2
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              nav('test3', {foo: 'fm', abuba: 'abc'});
+            }}
+          >
+            button to navigate test3 with params
           </button>
           {r}
         </div>
@@ -60,10 +75,37 @@ describe('route', () => {
       await userEvent.click(await screen.findByText('decent anchor'));
     });
 
+    screen.debug();
+
     expect(history.index).toBe(1);
 
     expect(history.location.pathname).toBe('/act/a/hoge/hgoe/baz');
     expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test1')).toBeInTheDocument();
+    expect(await screen.queryByText('foo=foo, bar=bar')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('button to navigate test2'));
+    });
+
+    expect(history.index).toBe(2);
+    expect(history.location.pathname).toBe('/abcdef');
+    expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
+    expect(await screen.queryByText('This is test1')).not.toBeInTheDocument();
+    expect(await screen.queryByText('This is test2')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('button to navigate test3 with params'));
+    });
+
+    screen.debug();
+    expect(history.index).toBe(3);
+    expect(history.location.pathname).toBe('/root/abc/ro/fm');
+    expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
+    expect(await screen.queryByText('This is test1')).not.toBeInTheDocument();
+    expect(await screen.queryByText('This is test2')).not.toBeInTheDocument();
+    expect(await screen.queryByText('This is test3')).toBeInTheDocument();
+    expect(await screen.queryByText('foo=fm, abuba=abc')).toBeInTheDocument();
+
   });
 });
