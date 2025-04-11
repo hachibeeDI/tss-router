@@ -20,7 +20,9 @@ describe('route', () => {
     .add('test3', '/root/:abuba/ro/:foo', (args) => (
       <div>
         <div>This is test3</div>
-        <div>foo={args.foo}, abuba={args.abuba}</div>
+        <div>
+          foo={args.foo}, abuba={args.abuba}
+        </div>
       </div>
     ));
   const {Link, useNavigate} = routingHooksFactory(router);
@@ -82,7 +84,7 @@ describe('route', () => {
     expect(history.location.pathname).toBe('/act/a/hoge/hgoe/baz');
     expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test1')).toBeInTheDocument();
-    expect(await screen.queryByText('foo=foo, bar=bar')).toBeInTheDocument();
+    expect(await screen.queryByText('foo=a, bar=hgoe')).toBeInTheDocument();
 
     await act(async () => {
       await userEvent.click(await screen.findByText('button to navigate test2'));
@@ -106,6 +108,5 @@ describe('route', () => {
     expect(await screen.queryByText('This is test2')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test3')).toBeInTheDocument();
     expect(await screen.queryByText('foo=fm, abuba=abc')).toBeInTheDocument();
-
   });
 });

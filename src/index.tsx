@@ -34,10 +34,9 @@ import {AssertionError} from 'assert';
 
 import type {ComponentProps, ReactNode} from 'react';
 import React, {createContext, use, useSyncExternalStore} from 'react';
-import type {History} from 'history';
 
 import {buildRoute} from './algo';
-import type {PathParser, Routing} from './types';
+import type {PathParser, Routing, History} from './types';
 
 type AsOptionalArgsIf<T> = keyof T extends never ? [] : [T];
 
@@ -76,12 +75,12 @@ class Router<Routings extends Record<string, Routing<string>>> {
   }
 
   public render(target: History['location']): ReactNode {
-    const found = Object.values(this.routings).find((routing) => routing.match.match(target.pathname));
+    const found = Object.values(this.routings).find((routing) => routing.match(target.pathname));
     if (found == null) {
       throw new LocationNotFoundError(target);
     }
 
-    return found.render(target.pathname);
+    return found.render(target);
   }
 }
 
