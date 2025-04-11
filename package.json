@@ -9,16 +9,13 @@
   "files": ["dist", "src"],
   "scripts": {
     "test": "vitest run",
-
     "check:type": "tsc -p tsconfig.mjs.json --noEmit",
     "check:lint": "biome lint src/ --vcs-use-ignore-file=true",
     "check:style": "biome format src/ --vcs-use-ignore-file=true",
     "check-all": "npm run check:type && mnpm run check:lint && npm run check:style",
-
     "fix:lint": "npm run check:lint --fix",
     "fix:style": "npm run check:style --write",
     "fix-all": "npm run fix:style && npm run fix:lint",
-
     "build": "npm run build:cjs && npm run build:esm",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.mjs.json"
@@ -35,13 +32,11 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.2",
+    "history": "^5.3.0",
     "jsdom": "^26.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
-  },
-  "dependencies": {
-    "history": "^5.3.0"
   }
 }
