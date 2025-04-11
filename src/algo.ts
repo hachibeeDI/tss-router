@@ -1,7 +1,7 @@
 import type {ReactNode} from 'react';
-import {PLACEHOLDER, type PathParser, type Routing} from './types';
+import {PLACEHOLDER, type Location, type PathParser, type Routing} from './types';
 
-export function pathMatcherFactory<Path extends string>(path: Path) {
+export function pathAlgorithmFactory<Path extends string>(path: Path) {
   const definition = path.split('/');
 
   return {
@@ -53,15 +53,49 @@ export function pathMatcherFactory<Path extends string>(path: Path) {
         .join('/');
       return `${builtPathname}${paramPart}`;
     },
+
+    extractParams: (location: Location): PathParser<Path> => {
+      const targetPath = location.pathname.split('/');
+      const pathDef = path.split('?')[0]?.split('/');
+      // if use this method for wrong location against path
+      if (pathDef == null || targetPath.length !== pathDef.length) {
+        return {} as PathParser<Path>;
+      }
+
+      let $search: undefined | Record<string, string> = undefined;
+      if (location.search !== '') {
+        $search = {};
+        for (const [key, value] of new URLSearchParams(location.search)) {
+          $search[key] = value;
+        }
+      }
+
+      return (
+        Array.from(targetPath.keys())
+          // biome-ignore lint/style/noNonNullAssertion: array length confirmed
+          .map((i) => [i, pathDef[i]!] as const)
+          .filter(([_i, def]) => def.startsWith(PLACEHOLDER))
+          .reduce(
+            (buf, [i, def]) => {
+              const key = def.replace(PLACEHOLDER, '');
+              // biome-ignore lint/style/noNonNullAssertion: array length confirmed
+              (buf as any)[key] = targetPath[i]!;
+              return buf;
+            },
+            $search ? {$search} : {},
+          ) as PathParser<Path>
+      );
+    },
   };
 }
 
 export function buildRoute<const Path extends string>(path: Path, render: (args: PathParser<Path>) => ReactNode): Routing<Path> {
-  const matcher = pathMatcherFactory(path);
+  const matcher = pathAlgorithmFactory(path);
   return {
     path,
     match: matcher.match,
     buildUrl: matcher.urlBuilder,
-    render,
+    extractParams: matcher.extractParams,
+    render: (loc: Location) => render(matcher.extractParams(loc)),
   };
 }

@@ -87,4 +87,16 @@ describe('url builder', () => {
       });
     });
   });
+
+  describe('extract params', () => {
+    test('works fine', () => {
+      const extractParams = pathAlgorithmFactory('/act/:foo/hoge/:bar/baz').extractParams;
+      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '', hash: ''})).toEqual({foo: 'foo', bar: 'bar'});
+      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '?token=token&id=id', hash: ''})).toEqual({
+        foo: 'foo',
+        bar: 'bar',
+        $search: {token: 'token', id: 'id'},
+      });
+    });
+  });
 });
