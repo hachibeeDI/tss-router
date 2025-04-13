@@ -17,6 +17,14 @@ describe('route', () => {
       </div>
     ))
     .add('test2', '/abcdef', (_args) => <div>This is test2</div>)
+    .add('user', '/user/:id?limit=x&query=y', (params) => (
+      <div>
+        <div>This is user</div>
+        <div>user id = {params.id}</div>
+        <div>search.limit={params.$search.limit ?? 'nasi!'}</div>
+        <div>search.query={params.$search.query ?? 'nasi!'}</div>
+      </div>
+    ))
     .add('test3', '/root/:abuba/ro/:foo', (args) => (
       <div>
         <div>This is test3</div>
@@ -49,6 +57,10 @@ describe('route', () => {
           >
             button to navigate test2
           </button>
+
+          <Link route="user" args={{id: 'a', $search: {}}}>
+            anchor to user
+          </Link>
 
           <button
             type="button"
@@ -84,7 +96,7 @@ describe('route', () => {
     expect(history.location.pathname).toBe('/act/a/hoge/hgoe/baz');
     expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test1')).toBeInTheDocument();
-    expect(await screen.queryByText('foo=foo, bar=bar')).toBeInTheDocument();
+    expect(await screen.queryByText('foo=a, bar=hgoe')).toBeInTheDocument();
 
     await act(async () => {
       await userEvent.click(await screen.findByText('button to navigate test2'));
@@ -108,5 +120,16 @@ describe('route', () => {
     expect(await screen.queryByText('This is test2')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test3')).toBeInTheDocument();
     expect(await screen.queryByText('foo=fm, abuba=abc')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('anchor to user'));
+    });
+
+    expect(history.index).toBe(4);
+    expect(history.location.pathname).toBe('/user/a');
+    expect(await screen.queryByText('This is user')).toBeInTheDocument();
+    expect(await screen.queryByText('user id = a')).toBeInTheDocument();
+    expect(await screen.queryByText('search.limit=nasi!')).toBeInTheDocument();
+    expect(await screen.queryByText('search.query=nasi!')).toBeInTheDocument();
   });
 });
