@@ -161,10 +161,16 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
       return <a {...rest} href={href} />;
     }
 
+    const url = router.buildUrl(
+      route,
+      // Limit of type inference
+      (args ?? {}) as any,
+    );
+
     return (
       <a
         {...rest}
-        // biome-ignore lint/a11y/useValidAnchor: I know what I'm doing
+        href={href ?? url}
         onClick={(e) => {
           if (onClick) {
             onClick(e);
@@ -177,11 +183,6 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
           }
 
           e.preventDefault();
-          const url = router.buildUrl(
-            route,
-            // Limit of type inference
-            (args ?? {}) as any,
-          );
           histCtx.push(url);
         }}
       />
