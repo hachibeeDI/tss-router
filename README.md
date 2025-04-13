@@ -12,7 +12,7 @@ A type-safe, lightweight router for React applications that provides strong Type
 ## Installation
 
 ```sh
-$ npm install --save tss-router
+$ npm install --save tss-route-lib
 ```
 
 ## Code example
