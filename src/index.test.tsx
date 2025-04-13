@@ -58,7 +58,7 @@ describe('route', () => {
             button to navigate test2
           </button>
 
-          <Link route="user" args={{id: 'a', $search: {}}}>
+          <Link route="user" args={{id: 'a', $search: {query: 'hopper'}}}>
             anchor to user
           </Link>
 
@@ -125,11 +125,12 @@ describe('route', () => {
       await userEvent.click(await screen.findByText('anchor to user'));
     });
 
+    screen.debug();
     expect(history.index).toBe(4);
     expect(history.location.pathname).toBe('/user/a');
     expect(await screen.queryByText('This is user')).toBeInTheDocument();
     expect(await screen.queryByText('user id = a')).toBeInTheDocument();
     expect(await screen.queryByText('search.limit=nasi!')).toBeInTheDocument();
-    expect(await screen.queryByText('search.query=nasi!')).toBeInTheDocument();
+    expect(await screen.queryByText('search.query=hopper')).toBeInTheDocument();
   });
 });
