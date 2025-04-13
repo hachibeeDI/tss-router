@@ -57,7 +57,7 @@ function Navigation() {
       <Link route="userDetail" args={{ userId: "123" }}>User 123</Link>
       
       {/* Link with search parameters */}
-      <Link route="searchProducts" searchParams={{ query: "laptop", category: "electronics", sort: "price" }}>
+      <Link route="searchProducts" args={{$search: {query: "laptop", category: "electronics", sort: "price" }}}>
         Search Electronics
       </Link>
       
@@ -67,7 +67,7 @@ function Navigation() {
       </button>
       
       {/* Programmatic navigation with search parameters */}
-      <button onClick={() => navigate('searchProducts', {}, { query: "shoes", sort: "newest" })}>
+      <button onClick={() => navigate('searchProducts', {$search: {query: "shoes", sort: "newest" }})}>
         Search for shoes
       </button>
     </nav>
