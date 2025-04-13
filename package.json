@@ -3,16 +3,30 @@
   "version": "0.0.1",
   "description": "TypeSafe Simple Router",
   "sideEffects": false,
-  "main": "./cjs/index.js",
-  "module": "./esm/index.js",
-  "types": "./esm/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      },
+      "default": "./dist/cjs/index.js"
+    }
+  },
+
   "files": ["dist", "src"],
   "scripts": {
     "test": "vitest run",
     "check:type": "tsc -p tsconfig.mjs.json --noEmit",
     "check:lint": "biome lint src/ --vcs-use-ignore-file=true",
     "check:style": "biome format src/ --vcs-use-ignore-file=true",
-    "check-all": "npm run check:type && mnpm run check:lint && npm run check:style",
+    "check-all": "npm run check:type && npm run check:lint && npm run check:style",
     "fix:lint": "npm run check:lint --fix",
     "fix:style": "npm run check:style --write",
     "fix-all": "npm run fix:style && npm run fix:lint",
