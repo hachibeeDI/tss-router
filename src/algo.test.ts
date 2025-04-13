@@ -91,12 +91,17 @@ describe('url builder', () => {
   describe('extract params', () => {
     test('works fine', () => {
       const extractParams = pathAlgorithmFactory('/act/:foo/hoge/:bar/baz').extractParams;
-      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '', hash: ''})).toEqual({foo: 'foo', bar: 'bar'});
-      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '?token=token&id=id', hash: ''})).toEqual({
+      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '', hash: '', state: undefined, key: ''})).toEqual({
         foo: 'foo',
         bar: 'bar',
-        $search: {token: 'token', id: 'id'},
       });
+      expect(extractParams({pathname: '/act/foo/hoge/bar/baz', search: '?token=token&id=id', hash: '', state: undefined, key: ''})).toEqual(
+        {
+          foo: 'foo',
+          bar: 'bar',
+          $search: {token: 'token', id: 'id'},
+        },
+      );
     });
   });
 });
