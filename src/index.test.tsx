@@ -1,4 +1,4 @@
-import React, {act, type ReactNode} from 'react';
+import {act, type ReactNode} from 'react';
 
 import {createMemoryHistory} from 'history';
 import {describe, expect, test} from 'vitest';
@@ -84,7 +84,7 @@ describe('route', () => {
     expect(history.location.pathname).toBe('/act/a/hoge/hgoe/baz');
     expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
     expect(await screen.queryByText('This is test1')).toBeInTheDocument();
-    expect(await screen.queryByText('foo=a, bar=hgoe')).toBeInTheDocument();
+    expect(await screen.queryByText('foo=foo, bar=bar')).toBeInTheDocument();
 
     await act(async () => {
       await userEvent.click(await screen.findByText('button to navigate test2'));
