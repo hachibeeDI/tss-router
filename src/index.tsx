@@ -32,10 +32,10 @@
 
 import {AssertionError} from 'assert';
 
-import type {ComponentProps, ReactNode} from 'react';
-import React, {createContext, use, useSyncExternalStore} from 'react';
+import type {ComponentProps, ReactNode, MouseEvent} from 'react';
+import {createContext, use, useSyncExternalStore} from 'react';
 
-import {buildRoute} from './algo';
+import {buildRoute, isModifiedEvent} from './algo';
 import type {PathParser, Routing, History} from './types';
 
 type AsOptionalArgsIf<T> = keyof T extends never ? [] : [T];
@@ -116,6 +116,22 @@ export function useLocation(): History['location'] {
   return useSyncExternalStore(hist.listen, () => hist.location);
 }
 
+type LinkPropsBase<Key extends string> = {
+  route: Key;
+  shouldPreventDefault?: (e: MouseEvent) => boolean;
+};
+
+type RouteProps<Routings extends Record<string, Routing<string>>, Key extends string> = keyof PathParser<
+  Routings[Key]['path']
+> extends never
+  ? LinkPropsBase<Key> & {args?: undefined}
+  : LinkPropsBase<Key> & {
+      args: PathParser<Routings[Key]['path']>;
+    };
+
+export type LinkProps<Routings extends Record<string, Routing<string>>, Key extends Extract<keyof Routings, string>> = ComponentProps<'a'> &
+  RouteProps<Routings, Key>;
+
 /**
  *
  */
@@ -138,15 +154,8 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
     };
   }
 
-  type RouteProps<Key extends string> = keyof PathParser<Routings[Key]['path']> extends never
-    ? {route: Key; args?: undefined}
-    : {
-        route: Key;
-        args: PathParser<Routings[Key]['path']>;
-      };
-
-  function Link<const Key extends Extract<keyof Routings, string>>(props: ComponentProps<'a'> & RouteProps<Key>) {
-    const {href, route, args, ...rest} = props;
+  function Link<const Key extends Extract<keyof Routings, string>>(props: LinkProps<Routings, Key>) {
+    const {shouldPreventDefault, onClick, href, route, args, ...rest} = props;
     const histCtx = useHistory();
     if (href) {
       return <a {...rest} href={href} />;
@@ -157,6 +166,16 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
         {...rest}
         // biome-ignore lint/a11y/useValidAnchor: I know what I'm doing
         onClick={(e) => {
+          if (onClick) {
+            onClick(e);
+          }
+          if (shouldPreventDefault?.(e)) {
+            return;
+          }
+          if (isModifiedEvent(e)) {
+            return;
+          }
+
           e.preventDefault();
           const url = router.buildUrl(
             route,

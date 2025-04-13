@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import type {ReactNode, MouseEvent} from 'react';
 import {PLACEHOLDER, type Location, type PathParser, type Routing} from './types';
 
 export function pathAlgorithmFactory<Path extends string>(path: Path) {
@@ -98,4 +98,8 @@ export function buildRoute<const Path extends string>(path: Path, render: (args:
     extractParams: matcher.extractParams,
     render: (loc: Location) => render(matcher.extractParams(loc)),
   };
+}
+
+export function isModifiedEvent(e: MouseEvent) {
+  return e.metaKey || e.altKey || e.ctrlKey || e.shiftKey;
 }
