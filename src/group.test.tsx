@@ -18,20 +18,33 @@ describe('Router.group', () => {
     console.clear();
   });
 
-  it('correctly handles routes with prefixes', () => {
+  // FIXME: AI generated gargabe.
+  // It doesn't know how to write test :(  However, it's a good starting point.
+  it('correctly handles routes with prefixes', async () => {
     // Create a router with grouped routes
-    const router = route('root', '/', () => <div data-testid="page">Root Page</div>)
+    const router = route('root', '/', () => <div>Root Page</div>)
       .group('/admin', (adminRouter) =>
         adminRouter
-          .route('/dashboard', '/', () => <div data-testid="page">Admin Dashboard</div>)
-          .route('/admin-users', '/users', () => <div data-testid="page">Admin Users</div>)
-          .route('/user-detail', '/users/:userId', (args) => <div data-testid="page">User {args.userId}</div>),
+          .route('/dashboard', '/', () => <div>Admin Dashboard</div>)
+          .route('/admin-users', '/users', () => <div>Admin Users</div>)
+          .route('/user-detail', '/users/:userId', (args) => <div>User {args.userId}</div>),
       )
-      .group('/api', (apiRouter) =>
-        apiRouter
-          .route('/v1-users', '/v1/users', () => <div data-testid="page">API v1 Users</div>)
-          // // Test nested group
-          // .group('/v2', (v2Router) => v2Router.route('users', '/users', () => <div data-testid="page">API v2 Users</div>)),
+      .group(
+        '/api',
+        (apiRouter) =>
+          apiRouter
+            .use(({children}) => {
+              return (
+                <div>
+                  <div>Api Layout</div>
+
+                  <section>{children}</section>
+                </div>
+              );
+            })
+            .route('/v1-users', '/v1/users', () => <div>API v1 Users</div>),
+        // // Test nested group
+        // .group('/v2', (v2Router) => v2Router.route('users', '/users', () => <div >API v2 Users</div>)),
       );
 
     // Debug: Output router information
@@ -49,12 +62,12 @@ describe('Router.group', () => {
       {path: '/admin', expected: 'Admin Dashboard'},
       {path: '/admin/users', expected: 'Admin Users'},
       {path: '/admin/users/123', expected: 'User 123'},
+      // test middleware
+      {path: '/api/v1/users', expected: 'Api Layout'},
       {path: '/api/v1/users', expected: 'API v1 Users'},
     ];
 
     for (const testCase of testCases) {
-      console.log(`\nTesting route: ${testCase.path}`);
-
       // Create memory history with the test path
       const history = createMemoryHistory({
         initialEntries: [testCase.path],
@@ -69,32 +82,34 @@ describe('Router.group', () => {
         console.log(`  ${key}: ${matches ? 'MATCH' : 'no match'}`);
       });
 
-      try {
-        // Render the app with the current history
-        const {unmount} = render(
-          <RouteProvider history={history}>
-            <App />
-          </RouteProvider>,
-        );
+      const {unmount} = render(
+        <RouteProvider history={history}>
+          <App />
+        </RouteProvider>,
+      );
 
-        // Assert the rendered content
-        expect(screen.getByTestId('page').textContent).toContain(testCase.expected);
+      screen.debug();
 
-        // Clean up after each test case
-        unmount();
-      } catch (error) {
-        console.error('Error rendering route:', error);
-        throw error;
-      }
+      expect(await screen.findByText(testCase.expected)).toBeInTheDocument();
+
+      unmount();
     }
   });
 
-  it('passes path parameters correctly in grouped routes', () => {
+  it('passes path parameters correctly in grouped routes', async () => {
     // Create a router with a grouped route that has path parameters
-    const router = route('root', '/', () => <div>Root Page</div>).group('/users', (usersRouter) =>
+    const router = route('root', '/', () => <div>Root Page</div>).group('/users/:userId', (usersRouter) =>
       usersRouter
-        .route('/user-detail', '/:userId/profile', (args) => <div data-testid="user-id">{args.userId}</div>)
-        .route('/user-posts', '/:userId/posts/:postId', (args) => (
+        .use(({params, children}) => {
+          return (
+            <div>
+              <div>User Layout Id={params.userId}</div>
+              {children}
+            </div>
+          );
+        })
+        .route('/user-detail', '/profile', (args) => <div data-testid="user-id">{args.userId}</div>)
+        .route('/user-posts', '/posts/:postId', (args) => (
           <div>
             <div data-testid="user-id">{args.userId}</div>
             <div data-testid="post-id">{args.postId}</div>
@@ -133,6 +148,8 @@ describe('Router.group', () => {
     );
 
     expect(screen.getByTestId('user-id').textContent).toBe('123');
+    expect(await screen.findByText('User Layout Id=123')).toBeInTheDocument();
+
     unmountProfile();
 
     // Test user posts route

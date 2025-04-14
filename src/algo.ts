@@ -105,14 +105,25 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
   };
 }
 
-export function buildRoute<const Path extends string>(path: Path, render: (args: PathParser<Path>) => ReactNode): Routing<Path> {
+export function buildRoute<const Path extends string>(
+  path: Path,
+  render: (args: PathParser<Path>) => ReactNode,
+  opts?:
+    | undefined
+    | {
+        Middleware?: (props: {params: PathParser<Path>; location: Location; children: ReactNode}) => ReactNode;
+      },
+): Routing<Path> {
   const matcher = pathAlgorithmFactory(path);
+  const {Middleware} = opts ?? {};
   return {
     path,
     match: matcher.match,
     buildUrl: matcher.urlBuilder,
     extractParams: matcher.extractParams,
-    render: (loc: Location) => render(matcher.extractParams(loc)),
+    render: Middleware
+      ? (loc: Location) => Middleware({params: matcher.extractParams(loc), location: loc, children: render(matcher.extractParams(loc))})
+      : (loc: Location) => render(matcher.extractParams(loc)),
   };
 }
 

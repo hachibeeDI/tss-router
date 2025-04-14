@@ -46,7 +46,7 @@ import type {ComponentProps, ReactNode, MouseEvent} from 'react';
 import {createContext, use, useSyncExternalStore} from 'react';
 
 import {buildRoute, isModifiedEvent} from './algo';
-import type {PathParser, Routing, History} from './types';
+import type {PathParser, Routing, History, Location} from './types';
 
 type AsOptionalArgsIf<T> = keyof T extends never ? [] : [T];
 
@@ -66,12 +66,24 @@ export function isLocationNotFoundError(err: unknown): err is LocationNotFoundEr
 type PrefixRestriction = `/${string}`;
 type InnerPathRestriction = PrefixRestriction;
 
+type MiddlewareProps<Prefix extends PrefixRestriction> = {
+  params: PathParser<Prefix>;
+  location: Location;
+  children: ReactNode;
+};
+
 class GroupRouter<Prefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>> {
   public routings: Routings = {} as Routings;
   private prefix: Prefix;
+  public Middleware?: (props: MiddlewareProps<Prefix>) => ReactNode;
 
   constructor(prefix: Prefix) {
     this.prefix = prefix;
+  }
+
+  public use(middleware: (props: MiddlewareProps<Prefix>) => ReactNode) {
+    this.Middleware = middleware;
+    return this;
   }
 
   public route<const Key extends InnerPathRestriction, const Path extends InnerPathRestriction>(
@@ -82,7 +94,15 @@ class GroupRouter<Prefix extends PrefixRestriction, Routings extends Record<stri
     const fullKey = `${this.prefix}${key}` as const;
     const fullPath = `${this.prefix}${path}` as const;
 
-    (this.routings as any)[fullKey] = buildRoute(fullPath, render);
+    (this.routings as any)[fullKey] = buildRoute(
+      fullPath,
+      render,
+      this.Middleware == null
+        ? undefined
+        : {
+            Middleware: (props) => (this.Middleware as any)(props),
+          },
+    );
     return this as any;
   }
 }
