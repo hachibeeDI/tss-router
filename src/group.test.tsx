@@ -21,11 +21,9 @@ describe('Router.group', () => {
 
   it('correctly handles routes with prefixes', () => {
     // Create a router with grouped routes
-    const router = route('root', '/', () => {
-      return <div data-testid="page">Root Page</div>;
-    })
-      .group('/admin', (adminRouter) => {
-        return adminRouter
+    const router = route('root', '/', () => <div data-testid="page">Root Page</div>)
+      .group('/admin', (adminRouter) =>
+        adminRouter
           .route('dashboard', '', () => {
             return <div data-testid="page">Admin Dashboard</div>;
           })
@@ -34,22 +32,20 @@ describe('Router.group', () => {
           })
           .route('user-detail', '/users/:userId', (args) => {
             return <div data-testid="page">User {args.userId}</div>;
-          });
-      })
-      .group('/api', (apiRouter) => {
-        return (
-          apiRouter
-            .route('v1-users', '/v1/users', () => {
-              return <div data-testid="page">API v1 Users</div>;
-            })
-            // Test nested group
-            .group('/v2', (v2Router) => {
-              return v2Router.route('users', '/users', () => {
-                return <div data-testid="page">API v2 Users</div>;
-              });
-            })
-        );
-      });
+          }),
+      )
+      .group('/api', (apiRouter) =>
+        apiRouter
+          .route('v1-users', '/v1/users', () => {
+            return <div data-testid="page">API v1 Users</div>;
+          })
+          // Test nested group
+          .group('/v2', (v2Router) => {
+            return v2Router.route('users', '/users', () => {
+              return <div data-testid="page">API v2 Users</div>;
+            });
+          }),
+      );
 
     // Debug: Output router information
     dumpRouterInfo(router);
@@ -109,22 +105,16 @@ describe('Router.group', () => {
 
   it('passes path parameters correctly in grouped routes', () => {
     // Create a router with a grouped route that has path parameters
-    const router = route('root', '/', () => {
-      return <div>Root Page</div>;
-    }).group('/users', (usersRouter) => {
-      return usersRouter
-        .route('user-detail', '/:userId/profile', (args) => {
-          return <div data-testid="user-id">{args.userId}</div>;
-        })
-        .route('user-posts', '/:userId/posts/:postId', (args) => {
-          return (
-            <div>
-              <div data-testid="user-id">{args.userId}</div>
-              <div data-testid="post-id">{args.postId}</div>
-            </div>
-          );
-        });
-    });
+    const router = route('root', '/', () => <div>Root Page</div>).group('/users', (usersRouter) =>
+      usersRouter
+        .route('user-detail', '/:userId/profile', (args) => <div data-testid="user-id">{args.userId}</div>)
+        .route('user-posts', '/:userId/posts/:postId', (args) => (
+          <div>
+            <div data-testid="user-id">{args.userId}</div>
+            <div data-testid="post-id">{args.postId}</div>
+          </div>
+        )),
+    );
 
     // Debug: Output router information
     dumpRouterInfo(router);
