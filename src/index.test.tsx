@@ -1,4 +1,4 @@
-import React, {act, type ReactNode} from 'react';
+import {act, type ReactNode} from 'react';
 
 import {createMemoryHistory} from 'history';
 import {describe, expect, test} from 'vitest';
