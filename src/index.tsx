@@ -4,23 +4,23 @@
  * import {createBrowserHistory} from 'history';
  * import {route, useRouter, RouteProvider} from 'tss-router';
  *
- * const r = route('root', '/', (args) => {
- *   return <div>`${args.foo + args.bar}`</div>;
+ * const r = route('root', '/', (params) => {
+ *   return <div>`${params.foo + params.bar}`</div>;
  * })
- * .add('test', '/act/:foo/hoge', (args) => {
- *   return <div>`${args.foo + args.bar}`</div>;
+ * .add('test', '/act/:foo/hoge', (params) => {
+ *   return <div>`${params.foo + params.bar}`</div>;
  * })
- * .add('test2', '/act/:foo/hoge/:bar/baz', (args) => {
- *   return <div>`${args.foo + args.bar}`</div>;
+ * .add('test2', '/act/:foo/hoge/:bar/baz', (params) => {
+ *   return <div>`${params.foo + params.bar}`</div>;
  * })
  * // Group related routes with a common prefix
  * .group('/api', (apiRouter) => {
  *   return apiRouter
- *     .route('users', '/users', (args) => {
+ *     .route('users', '/users', (params) => {
  *       return <div>API Users List</div>;
  *     })
- *     .route('user-detail', '/users/:userId', (args) => {
- *       return <div>User {args.userId} Details</div>;
+ *     .route('user-detail', '/users/:userId', (params) => {
+ *       return <div>User {params.userId} Details</div>;
  *     });
  * });
  *
@@ -48,7 +48,7 @@ import {createContext, use, useSyncExternalStore} from 'react';
 import {buildRoute, isModifiedEvent} from './algo';
 import type {PathParser, Routing, History, Location} from './types';
 
-type AsOptionalArgsIf<T> = keyof T extends never ? [] : [T];
+type AsOptionalparamsIf<T> = keyof T extends never ? [] : [T];
 
 export class LocationNotFoundError extends Error {
   public location: History['location'];
@@ -89,7 +89,7 @@ class GroupRouter<Prefix extends PrefixRestriction, Routings extends Record<stri
   public route<const Key extends InnerPathRestriction, const Path extends InnerPathRestriction>(
     key: Key,
     path: Path,
-    render: (args: PathParser<`${Prefix}${Path}`>) => ReactNode,
+    render: (params: PathParser<`${Prefix}${Path}`>) => ReactNode,
   ): GroupRouter<Prefix, Routings & {[k in `${Prefix}${Key}`]: Routing<`${Prefix}${Path}`>}> {
     const fullKey = `${this.prefix}${key}` as const;
     const fullPath = `${this.prefix}${path}` as const;
@@ -116,7 +116,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
   public route<const Key extends string, const Path extends string>(
     key: Key,
     path: Path,
-    render: (args: PathParser<Path>) => ReactNode,
+    render: (params: PathParser<Path>) => ReactNode,
   ): Router<Routings & {[k in Key]: Routing<Path>}> {
     return this.add(key, path, render);
   }
@@ -125,7 +125,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
   public add<const Key extends string, const Path extends string>(
     key: Key,
     path: Path,
-    render: (args: PathParser<Path>) => ReactNode,
+    render: (params: PathParser<Path>) => ReactNode,
   ): Router<Routings & {[k in Key]: Routing<Path>}> {
     // Yes, mutation and type unsafe
     (this.routings as any)[key] = buildRoute(path, render);
@@ -150,8 +150,8 @@ class Router<Routings extends Record<string, Routing<string>>> {
     return this as any;
   }
 
-  public buildUrl<const Key extends string>(key: Key, args: PathParser<Routings[Key]['path']>): string {
-    return (this.routings as any)[key].buildUrl(args);
+  public buildUrl<const Key extends string>(key: Key, params: PathParser<Routings[Key]['path']>): string {
+    return (this.routings as any)[key].buildUrl(params);
   }
 
   public render(target: History['location']): ReactNode {
@@ -167,7 +167,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
 export function route<const Key extends string, const Path extends string>(
   key: Key,
   path: Path,
-  render: (args: PathParser<Path>) => ReactNode,
+  render: (params: PathParser<Path>) => ReactNode,
 ): Router<Record<Key, Routing<Path>>> {
   return new Router({[key]: buildRoute(path, render)} as Record<Key, Routing<Path>>);
 }
@@ -204,9 +204,9 @@ type LinkPropsBase<Key extends string> = {
 type RouteProps<Routings extends Record<string, Routing<string>>, Key extends string> = keyof PathParser<
   Routings[Key]['path']
 > extends never
-  ? LinkPropsBase<Key> & {args?: undefined}
+  ? LinkPropsBase<Key> & {params?: undefined}
   : LinkPropsBase<Key> & {
-      args: PathParser<Routings[Key]['path']>;
+      params: PathParser<Routings[Key]['path']>;
     };
 
 export type LinkProps<Routings extends Record<string, Routing<string>>, Key extends Extract<keyof Routings, string>> = ComponentProps<'a'> &
@@ -222,12 +222,12 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
 
       return <const Key extends Extract<keyof Routings, string>>(
         key: Key,
-        ...[args]: AsOptionalArgsIf<PathParser<Routings[Key]['path']>>
+        ...[params]: AsOptionalparamsIf<PathParser<Routings[Key]['path']>>
       ): void => {
         const url = router.buildUrl(
           key,
           // Limit of type inference
-          (args ?? {}) as any,
+          (params ?? {}) as any,
         );
         histCtx[operation](url);
       };
@@ -235,7 +235,7 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
   }
 
   function Link<const Key extends Extract<keyof Routings, string>>(props: LinkProps<Routings, Key>) {
-    const {shouldPreventDefault, onClick, href, route, args, ...rest} = props;
+    const {shouldPreventDefault, onClick, href, route, params, ...rest} = props;
     const histCtx = useHistory();
     if (href) {
       return <a {...rest} href={href} />;
@@ -244,7 +244,7 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
     const url = router.buildUrl(
       route,
       // Limit of type inference
-      (args ?? {}) as any,
+      (params ?? {}) as any,
     );
 
     return (

@@ -27,7 +27,7 @@ describe('Router.group', () => {
         adminRouter
           .route('/dashboard', '/', () => <div>Admin Dashboard</div>)
           .route('/admin-users', '/users', () => <div>Admin Users</div>)
-          .route('/user-detail', '/users/:userId', (args) => <div>User {args.userId}</div>),
+          .route('/user-detail', '/users/:userId', (params) => <div>User {params.userId}</div>),
       )
       .group(
         '/api',
@@ -108,11 +108,11 @@ describe('Router.group', () => {
             </div>
           );
         })
-        .route('/user-detail', '/profile', (args) => <div data-testid="user-id">{args.userId}</div>)
-        .route('/user-posts', '/posts/:postId', (args) => (
+        .route('/user-detail', '/profile', (params) => <div data-testid="user-id">{params.userId}</div>)
+        .route('/user-posts', '/posts/:postId', (params) => (
           <div>
-            <div data-testid="user-id">{args.userId}</div>
-            <div data-testid="post-id">{args.postId}</div>
+            <div data-testid="user-id">{params.userId}</div>
+            <div data-testid="post-id">{params.postId}</div>
           </div>
         )),
     );
