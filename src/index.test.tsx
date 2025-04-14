@@ -10,13 +10,13 @@ import {RouteProvider, useRouter, route, routingHooksFactory} from './index';
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
-    .add('test', '/act/:foo/hoge/:bar/baz', (args) => (
+    .add('test', '/act/:foo/hoge/:bar/baz', (params) => (
       <div>
         <div>This is test1</div>
-        <div>{`foo=${args.foo}, bar=${args.bar}`}</div>
+        <div>{`foo=${params.foo}, bar=${params.bar}`}</div>
       </div>
     ))
-    .add('test2', '/abcdef', (_args) => <div>This is test2</div>)
+    .add('test2', '/abcdef', (_params) => <div>This is test2</div>)
     .add('user', '/user/:id?limit=x&query=y', (params) => (
       <div>
         <div>This is user</div>
@@ -25,11 +25,11 @@ describe('route', () => {
         <div>search.query={params.$search.query ?? 'nasi!'}</div>
       </div>
     ))
-    .add('test3', '/root/:abuba/ro/:foo', (args) => (
+    .add('test3', '/root/:abuba/ro/:foo', (params) => (
       <div>
         <div>This is test3</div>
         <div>
-          foo={args.foo}, abuba={args.abuba}
+          foo={params.foo}, abuba={params.abuba}
         </div>
       </div>
     ));
@@ -46,7 +46,7 @@ describe('route', () => {
       const nav = useNavigate();
       return (
         <div>
-          <Link route="test" args={{foo: 'a', bar: 'hgoe'}}>
+          <Link route="test" params={{foo: 'a', bar: 'hgoe'}}>
             decent anchor
           </Link>
           <button
@@ -58,7 +58,7 @@ describe('route', () => {
             button to navigate test2
           </button>
 
-          <Link route="user" args={{id: 'a', $search: {query: 'hopper'}}}>
+          <Link route="user" params={{id: 'a', $search: {query: 'hopper'}}}>
             anchor to user
           </Link>
 
