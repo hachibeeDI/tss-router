@@ -1,6 +1,6 @@
 {
   "files": {
-    "ignore": ["src/assets/fonts/seci-icons/**/*"]
+    "ignore": ["dist/**/*"]
   },
   "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
   "formatter": {

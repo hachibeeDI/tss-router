@@ -69,6 +69,7 @@ type InnerPathRestriction = PrefixRestriction;
 function defaultLayout<PathPrefix extends PrefixRestriction, Ctx>(_ctx: Ctx, _params: PathParser<PathPrefix>, children: ReactNode) {
   return children;
 }
+type AsContextParam<T, Params extends PathParser<string>> = keyof T extends never ? [] : [T | ((params: Params) => T)];
 
 class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>, Ctx> {
   public routings: Routings = {} as Routings;
@@ -90,7 +91,7 @@ class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction
     key: Key,
     path: Path,
     render: (params: PathParser<`${PathPrefix}${Path}`>) => ReactNode,
-    ...[context]: AsOptionalparamsIf<Ctx>
+    ...[context]: AsContextParam<Ctx, PathParser<`${PathPrefix}${Path}`>>
   ): GroupRouter<KeyPrefix, PathPrefix, Routings & {[k in `${KeyPrefix}${Key}`]: Routing<`${PathPrefix}${Path}`>}, Ctx> {
     const fullKey = `${this.keyPrefix}${key}` as const;
     const fullPath = `${this.pathPrefix}${path}` as const;
@@ -98,7 +99,7 @@ class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction
     (this.routings as any)[fullKey] = buildRoute(fullPath, render, {
       Middleware: (props) =>
         this.layout(
-          context as any,
+          typeof context === 'function' ? (context as any)(props.params) : context,
           // it's kinda up cast so it's safe
           props.params as any,
           props.children,

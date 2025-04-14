@@ -36,7 +36,7 @@ describe('route', () => {
     .group('article', '/articles/:id', {
       layout: (ctx: {foo: string}, params, children) => (
         <div>
-          <div>foo={ctx.foo}</div>
+          <div>Article Layout context="{ctx.foo}"</div>
           <div>This is article layout id={params.id}</div>
           {children}
         </div>
@@ -44,7 +44,12 @@ describe('route', () => {
       render: (g) =>
         g
           .route('/detail', '/detail', ({id}) => <div>This is article detail {id}</div>, {foo: 'detail for'})
-          .route('/edit', '/edit', ({id}) => <div>edit article {id}</div>, {foo: 'edit bar'}),
+          .route(
+            '/edit',
+            '/edit',
+            ({id}) => <div>edit article {id}</div>,
+            (params) => ({foo: `edit bar id=${params.id}`}),
+          ),
     });
   const {Link, useNavigate} = routingHooksFactory(router);
 
@@ -156,6 +161,7 @@ describe('route', () => {
     expect(history.index).toBe(5);
     expect(history.location.pathname).toBe('/articles/123/detail');
     expect(await screen.queryByText('This is article detail 123')).toBeInTheDocument();
+    expect(await screen.queryByText('Article Layout context="detail for"')).toBeInTheDocument();
     expect(await screen.queryByText('This is article layout id=123')).toBeInTheDocument();
 
     await act(async () => {
@@ -165,6 +171,7 @@ describe('route', () => {
     expect(history.index).toBe(6);
     expect(history.location.pathname).toBe('/articles/123/edit');
     expect(await screen.queryByText('edit article 123')).toBeInTheDocument();
+    expect(await screen.queryByText('Article Layout context="edit bar id=123"')).toBeInTheDocument();
     expect(await screen.queryByText('This is article layout id=123')).toBeInTheDocument();
   });
 });
