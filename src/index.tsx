@@ -63,6 +63,30 @@ export function isLocationNotFoundError(err: unknown): err is LocationNotFoundEr
   return err instanceof LocationNotFoundError;
 }
 
+type PrefixRestriction = `/${string}`;
+type InnerPathRestriction = PrefixRestriction;
+
+class GroupRouter<Prefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>> {
+  public routings: Routings = {} as Routings;
+  private prefix: Prefix;
+
+  constructor(prefix: Prefix) {
+    this.prefix = prefix;
+  }
+
+  public route<const Key extends InnerPathRestriction, const Path extends InnerPathRestriction>(
+    key: Key,
+    path: Path,
+    render: (args: PathParser<`${Prefix}${Path}`>) => ReactNode,
+  ): GroupRouter<Prefix, Routings & {[k in `${Prefix}${Key}`]: Routing<`${Prefix}${Path}`>}> {
+    const fullKey = `${this.prefix}${key}` as const;
+    const fullPath = `${this.prefix}${path}` as const;
+
+    (this.routings as any)[fullKey] = buildRoute(fullPath, render);
+    return this as any;
+  }
+}
+
 class Router<Routings extends Record<string, Routing<string>>> {
   public routings: Routings;
   constructor(route: Routings) {
@@ -95,54 +119,15 @@ class Router<Routings extends Record<string, Routing<string>>> {
    * @param groupFn A function that configures routes within this group
    * @returns The router instance with the grouped routes added
    */
-  public group<const Prefix extends string>(prefix: Prefix, groupFn: (router: any) => any): Router<Routings> {
-    // Normalize prefix to ensure it starts with / and doesn't end with /
-    const normalizedPrefix = prefix.startsWith('/') ? prefix : `/${prefix}`;
-    const cleanPrefix = normalizedPrefix.endsWith('/') ? normalizedPrefix.slice(0, -1) : normalizedPrefix;
+  public group<const Prefix extends PrefixRestriction, R extends Record<string, Routing<string>>>(
+    prefix: Prefix,
+    groupFn: (router: GroupRouter<Prefix, Routings>) => GroupRouter<Prefix, R>,
+  ): Router<Routings & R> {
+    const grouped = groupFn(new GroupRouter(prefix));
 
-    // Create a proxy router for the group
-    const groupRouter = new Router({} as any);
+    this.routings = {...this.routings, ...grouped.routings};
 
-    // Define special add method that prepends the prefix to paths
-    groupRouter.add = <const Key extends string, const Path extends string>(key: Key, path: Path, render: (args: any) => ReactNode) => {
-      // Normalize path for proper concatenation
-      let fullPath: string;
-
-      if (path === '') {
-        // Empty path means use the prefix directly
-        fullPath = cleanPrefix;
-      } else {
-        // Ensure path starts with / for concatenation
-        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-        fullPath = `${cleanPrefix}${normalizedPath}`;
-      }
-
-      // Add the route to original router
-      this.add(key, fullPath as any, render);
-
-      return groupRouter;
-    };
-
-    // Alias route to add
-    groupRouter.route = groupRouter.add;
-
-    // Support nested groups
-    groupRouter.group = <const NestedPrefix extends string>(nestedPrefix: NestedPrefix, nestedGroupFn: (router: any) => any) => {
-      // Normalize nested prefix
-      const normNestedPrefix = nestedPrefix.startsWith('/') ? nestedPrefix : `/${nestedPrefix}`;
-      const combinedPrefix = `${cleanPrefix}${normNestedPrefix}`;
-
-      // Call group on the original router
-      this.group(combinedPrefix, nestedGroupFn);
-
-      return groupRouter;
-    };
-
-    // Execute the group function with our proxy router
-    groupFn(groupRouter);
-
-    // Return the original router with all routes added
-    return this;
+    return this as any;
   }
 
   public buildUrl<const Key extends string>(key: Key, args: PathParser<Routings[Key]['path']>): string {
