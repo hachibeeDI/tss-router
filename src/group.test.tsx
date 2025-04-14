@@ -23,13 +23,14 @@ describe('Router.group', () => {
   it('correctly handles routes with prefixes', async () => {
     // Create a router with grouped routes
     const router = route('root', '/', () => <div>Root Page</div>)
-      .group('/admin', (adminRouter) =>
+      .group('root', '/admin', (adminRouter) =>
         adminRouter
           .route('/dashboard', '/', () => <div>Admin Dashboard</div>)
           .route('/admin-users', '/users', () => <div>Admin Users</div>)
           .route('/user-detail', '/users/:userId', (params) => <div>User {params.userId}</div>),
       )
       .group(
+        'api',
         '/api',
         (apiRouter) =>
           apiRouter
@@ -98,7 +99,7 @@ describe('Router.group', () => {
 
   it('passes path parameters correctly in grouped routes', async () => {
     // Create a router with a grouped route that has path parameters
-    const router = route('root', '/', () => <div>Root Page</div>).group('/users/:userId', (usersRouter) =>
+    const router = route('root', '/', () => <div>Root Page</div>).group('users', '/users/:userId', (usersRouter) =>
       usersRouter
         .use(({params, children}) => {
           return (

@@ -72,27 +72,29 @@ type MiddlewareProps<Prefix extends PrefixRestriction> = {
   children: ReactNode;
 };
 
-class GroupRouter<Prefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>> {
+class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>> {
   public routings: Routings = {} as Routings;
-  private prefix: Prefix;
-  public Middleware?: (props: MiddlewareProps<Prefix>) => ReactNode;
+  private keyPrefix: KeyPrefix;
+  private pathPrefix: PathPrefix;
+  public Middleware?: (props: MiddlewareProps<PathPrefix>) => ReactNode;
 
-  constructor(prefix: Prefix) {
-    this.prefix = prefix;
+  constructor(keyPrefix: KeyPrefix, pathPrefix: PathPrefix) {
+    this.keyPrefix = keyPrefix;
+    this.pathPrefix = pathPrefix;
   }
 
-  public use(middleware: (props: MiddlewareProps<Prefix>) => ReactNode) {
+  public use(middleware: (props: MiddlewareProps<PathPrefix>) => ReactNode) {
     this.Middleware = middleware;
     return this;
   }
 
-  public route<const Key extends InnerPathRestriction, const Path extends InnerPathRestriction>(
+  public route<const Key extends string, const Path extends InnerPathRestriction>(
     key: Key,
     path: Path,
-    render: (params: PathParser<`${Prefix}${Path}`>) => ReactNode,
-  ): GroupRouter<Prefix, Routings & {[k in `${Prefix}${Key}`]: Routing<`${Prefix}${Path}`>}> {
-    const fullKey = `${this.prefix}${key}` as const;
-    const fullPath = `${this.prefix}${path}` as const;
+    render: (params: PathParser<`${PathPrefix}${Path}`>) => ReactNode,
+  ): GroupRouter<KeyPrefix, PathPrefix, Routings & {[k in `${KeyPrefix}${Key}`]: Routing<`${PathPrefix}${Path}`>}> {
+    const fullKey = `${this.keyPrefix}${key}` as const;
+    const fullPath = `${this.pathPrefix}${path}` as const;
 
     (this.routings as any)[fullKey] = buildRoute(
       fullPath,
@@ -139,11 +141,12 @@ class Router<Routings extends Record<string, Routing<string>>> {
    * @param groupFn A function that configures routes within this group
    * @returns The router instance with the grouped routes added
    */
-  public group<const Prefix extends PrefixRestriction, R extends Record<string, Routing<string>>>(
-    prefix: Prefix,
-    groupFn: (router: GroupRouter<Prefix, Routings>) => GroupRouter<Prefix, R>,
+  public group<const KeyPrefix extends string, const PathPrefix extends PrefixRestriction, R extends Record<string, Routing<string>>>(
+    keyPrefix: KeyPrefix,
+    prefix: PathPrefix,
+    groupFn: (router: GroupRouter<KeyPrefix, PathPrefix, Routings>) => GroupRouter<KeyPrefix, PathPrefix, R>,
   ): Router<Routings & R> {
-    const grouped = groupFn(new GroupRouter(prefix));
+    const grouped = groupFn(new GroupRouter(keyPrefix, prefix));
 
     this.routings = {...this.routings, ...grouped.routings};
 
