@@ -12,6 +12,16 @@
  * })
  * .add('test2', '/act/:foo/hoge/:bar/baz', (args) => {
  *   return <div>`${args.foo + args.bar}`</div>;
+ * })
+ * // Group related routes with a common prefix
+ * .group('/api', (apiRouter) => {
+ *   return apiRouter
+ *     .route('users', '/users', (args) => {
+ *       return <div>API Users List</div>;
+ *     })
+ *     .route('user-detail', '/users/:userId', (args) => {
+ *       return <div>User {args.userId} Details</div>;
+ *     });
  * });
  *
  * funcion App() {
@@ -59,6 +69,15 @@ class Router<Routings extends Record<string, Routing<string>>> {
     this.routings = route;
   }
 
+  public route<const Key extends string, const Path extends string>(
+    key: Key,
+    path: Path,
+    render: (args: PathParser<Path>) => ReactNode,
+  ): Router<Routings & {[k in Key]: Routing<Path>}> {
+    return this.add(key, path, render);
+  }
+
+  /** @deprecated Use `route` instead. */
   public add<const Key extends string, const Path extends string>(
     key: Key,
     path: Path,
@@ -68,6 +87,62 @@ class Router<Routings extends Record<string, Routing<string>>> {
     (this.routings as any)[key] = buildRoute(path, render);
 
     return this as any;
+  }
+
+  /**
+   * Creates a group of routes with a common path prefix.
+   * @param prefix The common path prefix for all routes in the group
+   * @param groupFn A function that configures routes within this group
+   * @returns The router instance with the grouped routes added
+   */
+  public group<const Prefix extends string>(prefix: Prefix, groupFn: (router: any) => any): Router<Routings> {
+    // Normalize prefix to ensure it starts with / and doesn't end with /
+    const normalizedPrefix = prefix.startsWith('/') ? prefix : `/${prefix}`;
+    const cleanPrefix = normalizedPrefix.endsWith('/') ? normalizedPrefix.slice(0, -1) : normalizedPrefix;
+
+    // Create a proxy router for the group
+    const groupRouter = new Router({} as any);
+
+    // Define special add method that prepends the prefix to paths
+    groupRouter.add = <const Key extends string, const Path extends string>(key: Key, path: Path, render: (args: any) => ReactNode) => {
+      // Normalize path for proper concatenation
+      let fullPath: string;
+
+      if (path === '') {
+        // Empty path means use the prefix directly
+        fullPath = cleanPrefix;
+      } else {
+        // Ensure path starts with / for concatenation
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        fullPath = `${cleanPrefix}${normalizedPath}`;
+      }
+
+      // Add the route to original router
+      this.add(key, fullPath as any, render);
+
+      return groupRouter;
+    };
+
+    // Alias route to add
+    groupRouter.route = groupRouter.add;
+
+    // Support nested groups
+    groupRouter.group = <const NestedPrefix extends string>(nestedPrefix: NestedPrefix, nestedGroupFn: (router: any) => any) => {
+      // Normalize nested prefix
+      const normNestedPrefix = nestedPrefix.startsWith('/') ? nestedPrefix : `/${nestedPrefix}`;
+      const combinedPrefix = `${cleanPrefix}${normNestedPrefix}`;
+
+      // Call group on the original router
+      this.group(combinedPrefix, nestedGroupFn);
+
+      return groupRouter;
+    };
+
+    // Execute the group function with our proxy router
+    groupFn(groupRouter);
+
+    // Return the original router with all routes added
+    return this;
   }
 
   public buildUrl<const Key extends string>(key: Key, args: PathParser<Routings[Key]['path']>): string {
