@@ -46,7 +46,7 @@ import type {ComponentProps, ReactNode, MouseEvent} from 'react';
 import {createContext, use, useSyncExternalStore} from 'react';
 
 import {buildRoute, isModifiedEvent} from './algo';
-import type {PathParser, Routing, History, Location} from './types';
+import type {PathParser, Routing, History} from './types';
 
 type AsOptionalparamsIf<T> = keyof T extends never ? [] : [T];
 
@@ -66,45 +66,44 @@ export function isLocationNotFoundError(err: unknown): err is LocationNotFoundEr
 type PrefixRestriction = `/${string}`;
 type InnerPathRestriction = PrefixRestriction;
 
-type MiddlewareProps<Prefix extends PrefixRestriction> = {
-  params: PathParser<Prefix>;
-  location: Location;
-  children: ReactNode;
-};
+function defaultLayout<PathPrefix extends PrefixRestriction, Ctx>(_ctx: Ctx, _params: PathParser<PathPrefix>, children: ReactNode) {
+  return children;
+}
 
-class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>> {
+class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction, Routings extends Record<string, Routing<string>>, Ctx> {
   public routings: Routings = {} as Routings;
   private keyPrefix: KeyPrefix;
   private pathPrefix: PathPrefix;
-  public Middleware?: (props: MiddlewareProps<PathPrefix>) => ReactNode;
+  private layout: (ctx: Ctx, params: PathParser<PathPrefix>, children: ReactNode) => ReactNode;
 
-  constructor(keyPrefix: KeyPrefix, pathPrefix: PathPrefix) {
+  constructor(
+    keyPrefix: KeyPrefix,
+    pathPrefix: PathPrefix,
+    layout: (ctx: Ctx, params: PathParser<PathPrefix>, children: ReactNode) => ReactNode = defaultLayout,
+  ) {
     this.keyPrefix = keyPrefix;
     this.pathPrefix = pathPrefix;
-  }
-
-  public use(middleware: (props: MiddlewareProps<PathPrefix>) => ReactNode) {
-    this.Middleware = middleware;
-    return this;
+    this.layout = layout;
   }
 
   public route<const Key extends string, const Path extends InnerPathRestriction>(
     key: Key,
     path: Path,
     render: (params: PathParser<`${PathPrefix}${Path}`>) => ReactNode,
-  ): GroupRouter<KeyPrefix, PathPrefix, Routings & {[k in `${KeyPrefix}${Key}`]: Routing<`${PathPrefix}${Path}`>}> {
+    ...[context]: AsOptionalparamsIf<Ctx>
+  ): GroupRouter<KeyPrefix, PathPrefix, Routings & {[k in `${KeyPrefix}${Key}`]: Routing<`${PathPrefix}${Path}`>}, Ctx> {
     const fullKey = `${this.keyPrefix}${key}` as const;
     const fullPath = `${this.pathPrefix}${path}` as const;
 
-    (this.routings as any)[fullKey] = buildRoute(
-      fullPath,
-      render,
-      this.Middleware == null
-        ? undefined
-        : {
-            Middleware: (props) => (this.Middleware as any)(props),
-          },
-    );
+    (this.routings as any)[fullKey] = buildRoute(fullPath, render, {
+      Middleware: (props) =>
+        this.layout(
+          context as any,
+          // it's kinda up cast so it's safe
+          props.params as any,
+          props.children,
+        ),
+    });
     return this as any;
   }
 }
@@ -138,15 +137,28 @@ class Router<Routings extends Record<string, Routing<string>>> {
   /**
    * Creates a group of routes with a common path prefix.
    * @param prefix The common path prefix for all routes in the group
-   * @param groupFn A function that configures routes within this group
+   * @param render A function that configures routes within this group
    * @returns The router instance with the grouped routes added
    */
-  public group<const KeyPrefix extends string, const PathPrefix extends PrefixRestriction, R extends Record<string, Routing<string>>>(
+  public group<
+    const KeyPrefix extends string,
+    const PathPrefix extends PrefixRestriction,
+    R extends Record<string, Routing<string>>,
+    Ctx = undefined,
+  >(
     keyPrefix: KeyPrefix,
     prefix: PathPrefix,
-    groupFn: (router: GroupRouter<KeyPrefix, PathPrefix, Routings>) => GroupRouter<KeyPrefix, PathPrefix, R>,
+    renderOrLayoutAndRender:
+      | ((router: GroupRouter<KeyPrefix, PathPrefix, Routings, Ctx>) => GroupRouter<KeyPrefix, PathPrefix, R, Ctx>)
+      | {
+          layout: (ctx: Ctx, params: PathParser<PathPrefix>, children: ReactNode) => ReactNode;
+          render: (router: GroupRouter<KeyPrefix, PathPrefix, Routings, Ctx>) => GroupRouter<KeyPrefix, PathPrefix, R, Ctx>;
+        },
   ): Router<Routings & R> {
-    const grouped = groupFn(new GroupRouter(keyPrefix, prefix));
+    const grouped =
+      typeof renderOrLayoutAndRender === 'function'
+        ? renderOrLayoutAndRender(new GroupRouter(keyPrefix, prefix))
+        : renderOrLayoutAndRender.render(new GroupRouter(keyPrefix, prefix, renderOrLayoutAndRender.layout));
 
     this.routings = {...this.routings, ...grouped.routings};
 

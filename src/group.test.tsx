@@ -32,18 +32,16 @@ describe('Router.group', () => {
       .group(
         'api',
         '/api',
-        (apiRouter) =>
-          apiRouter
-            .use(({children}) => {
-              return (
-                <div>
-                  <div>Api Layout</div>
+        {
+          layout: (_ctx, _params, children) => (
+            <div>
+              <div>Api Layout</div>
 
-                  <section>{children}</section>
-                </div>
-              );
-            })
-            .route('/v1-users', '/v1/users', () => <div>API v1 Users</div>),
+              <section>{children}</section>
+            </div>
+          ),
+          render: (apiRouter) => apiRouter.route('/v1-users', '/v1/users', () => <div>API v1 Users</div>),
+        },
         // // Test nested group
         // .group('/v2', (v2Router) => v2Router.route('users', '/users', () => <div >API v2 Users</div>)),
       );
@@ -99,24 +97,23 @@ describe('Router.group', () => {
 
   it('passes path parameters correctly in grouped routes', async () => {
     // Create a router with a grouped route that has path parameters
-    const router = route('root', '/', () => <div>Root Page</div>).group('users', '/users/:userId', (usersRouter) =>
-      usersRouter
-        .use(({params, children}) => {
-          return (
+    const router = route('root', '/', () => <div>Root Page</div>).group('users', '/users/:userId', {
+      layout: (_ctx, params, children) => (
+        <div>
+          <div>User Layout Id={params.userId}</div>
+          {children}
+        </div>
+      ),
+      render: (usersRouter) =>
+        usersRouter
+          .route('/user-detail', '/profile', (params) => <div data-testid="user-id">{params.userId}</div>)
+          .route('/user-posts', '/posts/:postId', (params) => (
             <div>
-              <div>User Layout Id={params.userId}</div>
-              {children}
+              <div data-testid="user-id">{params.userId}</div>
+              <div data-testid="post-id">{params.postId}</div>
             </div>
-          );
-        })
-        .route('/user-detail', '/profile', (params) => <div data-testid="user-id">{params.userId}</div>)
-        .route('/user-posts', '/posts/:postId', (params) => (
-          <div>
-            <div data-testid="user-id">{params.userId}</div>
-            <div data-testid="post-id">{params.postId}</div>
-          </div>
-        )),
-    );
+          )),
+    });
 
     // Debug: Output router information
     dumpRouterInfo(router);
