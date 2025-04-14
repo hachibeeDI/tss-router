@@ -1,4 +1,4 @@
-import {act, type ReactNode} from 'react';
+import React, {act, type ReactNode} from 'react';
 
 import {createMemoryHistory} from 'history';
 import {describe, expect, test} from 'vitest';
@@ -32,7 +32,18 @@ describe('route', () => {
           foo={params.foo}, abuba={params.abuba}
         </div>
       </div>
-    ));
+    ))
+    .group('article', '/articles/:id', (g) =>
+      g
+        .route('/detail', '/detail', ({id}) => <div>This is article detail {id}</div>)
+        .use(({params: {id}, children}) => (
+          <div>
+            <div>This is article layout id={id}</div>
+            {children}
+          </div>
+        ))
+        .route('/edit', '/edit', ({id}) => <div>edit article {id}</div>),
+    );
   const {Link, useNavigate} = routingHooksFactory(router);
 
   test('works fine', async () => {
@@ -70,6 +81,13 @@ describe('route', () => {
           >
             button to navigate test3 with params
           </button>
+
+          <Link route="article/detail" params={{id: '123'}}>
+            anchor to article detail
+          </Link>
+          <Link route="article/edit" params={{id: '123'}}>
+            anchor to article edit
+          </Link>
           {r}
         </div>
       );
@@ -88,8 +106,6 @@ describe('route', () => {
     await act(async () => {
       await userEvent.click(await screen.findByText('decent anchor'));
     });
-
-    screen.debug();
 
     expect(history.index).toBe(1);
 
@@ -112,7 +128,6 @@ describe('route', () => {
       await userEvent.click(await screen.findByText('button to navigate test3 with params'));
     });
 
-    screen.debug();
     expect(history.index).toBe(3);
     expect(history.location.pathname).toBe('/root/abc/ro/fm');
     expect(await screen.queryByText('This is root page')).not.toBeInTheDocument();
@@ -125,12 +140,31 @@ describe('route', () => {
       await userEvent.click(await screen.findByText('anchor to user'));
     });
 
-    screen.debug();
     expect(history.index).toBe(4);
     expect(history.location.pathname).toBe('/user/a');
     expect(await screen.queryByText('This is user')).toBeInTheDocument();
     expect(await screen.queryByText('user id = a')).toBeInTheDocument();
     expect(await screen.queryByText('search.limit=nasi!')).toBeInTheDocument();
     expect(await screen.queryByText('search.query=hopper')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('anchor to article detail'));
+    });
+
+    expect(history.index).toBe(5);
+    expect(history.location.pathname).toBe('/articles/123/detail');
+    expect(await screen.queryByText('This is article detail 123')).toBeInTheDocument();
+    // NOT! because of use() only affects onward routes
+    expect(await screen.queryByText('This is article layout id=123')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(await screen.findByText('anchor to article edit'));
+    });
+
+    expect(history.index).toBe(6);
+    expect(history.location.pathname).toBe('/articles/123/edit');
+    expect(await screen.queryByText('edit article 123')).toBeInTheDocument();
+    // affected by use()
+    expect(await screen.queryByText('This is article layout id=123')).toBeInTheDocument();
   });
 });
