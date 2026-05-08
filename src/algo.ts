@@ -2,8 +2,10 @@ import type {ReactNode, MouseEvent} from 'react';
 import {PLACEHOLDER, type Location, type PathParser, type Routing} from './types';
 
 export function pathAlgorithmFactory<Path extends string>(path: Path) {
-  // Normalize definition by removing any empty segments that might come from double slashes
-  const definition = path.split('/').filter((segment) => segment !== '');
+  // Strip query template (?...) and normalize away empty segments from leading/trailing/double slashes
+  // biome-ignore lint/style/noNonNullAssertion: split always returns at least one element
+  const pathOnly = path.split('?')[0]!;
+  const definition = pathOnly.split('/').filter((segment) => segment !== '');
 
   return {
     match: (pathname: string) => {

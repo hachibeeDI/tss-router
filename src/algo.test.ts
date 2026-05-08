@@ -36,6 +36,19 @@ describe('matcher', () => {
 
     expect(complArgsMat.match('/hoge/bar/leef/hom')).toBeTruthy();
   });
+
+  test('definition with query template ignores the query when matching', () => {
+    // search-only definition (no path placeholder before ?). The query template
+    // is metadata used by the type system / extractParams; the matcher must
+    // ignore it so /products matches the definition.
+    const m = pathAlgorithmFactory('/products?query=query&category=category');
+    expect(m.match('/products')).toBeTruthy();
+    expect(m.match('/products/extra')).toBeFalsy();
+
+    const withParam = pathAlgorithmFactory('/users/:id?limit=x');
+    expect(withParam.match('/users/abc')).toBeTruthy();
+    expect(withParam.match('/users')).toBeFalsy();
+  });
 });
 
 describe('url builder', () => {

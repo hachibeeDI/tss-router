@@ -175,3 +175,23 @@ describe('route', () => {
     expect(await screen.queryByText('This is article layout id=123')).toBeInTheDocument();
   });
 });
+
+describe('Router resolution regressions', () => {
+  test('matches a route whose definition contains a query template', () => {
+    // The matcher used to leave the ?... portion in the last definition segment,
+    // which made these patterns unmatchable.
+    const router = route('search', '/products?query=query&category=category', (params) => (
+      <div>search q={params.$search.query ?? 'none'}</div>
+    ));
+
+    const node = router.render({
+      pathname: '/products',
+      search: '?query=laptop',
+      hash: '',
+      state: undefined,
+      key: '',
+    });
+    render(<>{node}</>);
+    expect(screen.queryByText('search q=laptop')).toBeInTheDocument();
+  });
+});
