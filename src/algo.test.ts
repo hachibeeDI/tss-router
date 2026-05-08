@@ -260,13 +260,48 @@ describe('url builder', () => {
     });
   });
 
-  describe('current limitations (documented)', () => {
-    test('urlBuilder does NOT URL-encode path or search values', () => {
-      // The library expects callers to pass already-encoded values, or values
-      // that don't need encoding. Surfacing this so a future change to add
-      // encoding is a deliberate, observable update.
-      const algo = pathAlgorithmFactory('/users/:id?q=q');
-      expect(algo.urlBuilder({id: 'a/b', $search: {q: 'a&b'}})).toBe('/users/a/b?q=a&b');
+  describe('URL encoding', () => {
+    test('encodes reserved characters in path params', () => {
+      const algo = pathAlgorithmFactory('/users/:id');
+      // '/', '?', '#' would otherwise break the path/query/fragment boundary
+      expect(algo.urlBuilder({id: 'a/b'})).toBe('/users/a%2Fb');
+      expect(algo.urlBuilder({id: 'a?b'})).toBe('/users/a%3Fb');
+      expect(algo.urlBuilder({id: 'a#b'})).toBe('/users/a%23b');
+    });
+
+    test('encodes spaces and non-ASCII characters in path params', () => {
+      const algo = pathAlgorithmFactory('/q/:term');
+      expect(algo.urlBuilder({term: 'hello world'})).toBe('/q/hello%20world');
+      expect(algo.urlBuilder({term: '日本語'})).toBe('/q/%E6%97%A5%E6%9C%AC%E8%AA%9E');
+    });
+
+    test('encodes reserved characters in $search via URLSearchParams', () => {
+      const algo = pathAlgorithmFactory('/q?term=term');
+      // URLSearchParams uses application/x-www-form-urlencoded: space -> '+', '&' -> '%26', etc.
+      expect(algo.urlBuilder({$search: {term: 'a&b=c'}})).toBe('/q?term=a%26b%3Dc');
+      expect(algo.urlBuilder({$search: {term: 'hello world'}})).toBe('/q?term=hello+world');
+    });
+
+    test('decodes percent-encoded path params on extract', () => {
+      const extract = pathAlgorithmFactory('/users/:id').extractParams;
+      expect(extract({pathname: '/users/a%2Fb', search: '', hash: '', state: undefined, key: ''})).toEqual({id: 'a/b'});
+      expect(extract({pathname: '/users/hello%20world', search: '', hash: '', state: undefined, key: ''})).toEqual({
+        id: 'hello world',
+      });
+      expect(extract({pathname: '/users/%E6%97%A5%E6%9C%AC%E8%AA%9E', search: '', hash: '', state: undefined, key: ''})).toEqual({
+        id: '日本語',
+      });
+    });
+
+    test('build then extract round-trips special characters', () => {
+      const algo = pathAlgorithmFactory('/q/:term?filter=filter');
+      const built = algo.urlBuilder({term: 'a/b c', $search: {filter: 'x&y'}});
+      expect(built).toBe('/q/a%2Fb%20c?filter=x%26y');
+
+      const [pathname, search] = built.split('?');
+      expect(
+        algo.extractParams({pathname: pathname ?? '', search: search ? `?${search}` : '', hash: '', state: undefined, key: ''}),
+      ).toEqual({term: 'a/b c', $search: {filter: 'x&y'}});
     });
   });
 });

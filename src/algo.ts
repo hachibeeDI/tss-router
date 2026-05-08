@@ -40,13 +40,18 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
     urlBuilder: (params: PathParser<Path>) => {
       let paramPart = '';
       if ('$search' in params && params.$search != null) {
-        // Drop entries whose value is null/undefined so the resulting URL
-        // never contains "?key=undefined" or a bare trailing "?".
-        const pairs = Object.entries(params.$search)
-          .filter(([_, v]) => v != null)
-          .map(([k, v]) => `${k}=${v}`);
-        if (pairs.length > 0) {
-          paramPart = `?${pairs.join('&')}`;
+        // URLSearchParams handles encoding (RFC 1738 form-urlencoded) and
+        // skipping nullish values keeps the URL free of "?key=undefined"
+        // and bare trailing "?" cases.
+        const sp = new URLSearchParams();
+        for (const [k, v] of Object.entries(params.$search)) {
+          if (v != null) {
+            sp.append(k, String(v));
+          }
+        }
+        const s = sp.toString();
+        if (s.length > 0) {
+          paramPart = `?${s}`;
         }
       }
 
@@ -60,7 +65,8 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
         .map((x) => {
           if (x.startsWith(PLACEHOLDER)) {
             const key = x.replace(PLACEHOLDER, '');
-            return (params as any)[key];
+            // Encode so values containing '/', '?', '#', etc. don't break the path structure.
+            return encodeURIComponent((params as any)[key]);
           }
           return x;
         })
@@ -92,7 +98,7 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
         }
       }
 
-      // Extract path parameters
+      // Extract path parameters (decoded; the search side is already decoded by URLSearchParams above)
       return (
         Array.from(targetPath.keys())
           // biome-ignore lint/style/noNonNullAssertion: array length confirmed
@@ -102,7 +108,7 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
             (buf, [i, def]) => {
               const key = def.replace(PLACEHOLDER, '');
               // biome-ignore lint/style/noNonNullAssertion: array length confirmed
-              (buf as any)[key] = targetPath[i]!;
+              (buf as any)[key] = decodeURIComponent(targetPath[i]!);
               return buf;
             },
             $search ? {$search} : {},
