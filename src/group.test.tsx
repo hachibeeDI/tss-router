@@ -1,8 +1,7 @@
 import {render, screen} from '@testing-library/react';
-import {createMemoryHistory} from 'history';
 import {describe, it, expect, beforeEach} from 'vitest';
 
-import {route, RouteProvider, useRouter} from './index';
+import {route, RouteProvider, useRouter, createMemoryHistory} from './index';
 
 // Debug function to inspect router
 function dumpRouterInfo(router: any) {

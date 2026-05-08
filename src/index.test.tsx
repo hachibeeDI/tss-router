@@ -1,12 +1,19 @@
 import {act, type ReactNode} from 'react';
 
-import {createMemoryHistory} from 'history';
 import {describe, expect, test} from 'vitest';
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
-import {RouteProvider, useRouter, route, routingHooksFactory, LocationNotFoundError, isLocationNotFoundError} from './index';
+import {
+  RouteProvider,
+  useRouter,
+  route,
+  routingHooksFactory,
+  LocationNotFoundError,
+  isLocationNotFoundError,
+  createMemoryHistory,
+} from './index';
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
