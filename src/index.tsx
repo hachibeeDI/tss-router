@@ -1,30 +1,29 @@
 /**
  * sample:
  * ```typescript
- * import {createBrowserHistory} from 'history';
- * import {route, useRouter, RouteProvider} from 'tss-router';
+ * import {route, useRouter, RouteProvider, createBrowserHistory} from 'tss-router';
  *
  * const r = route('root', '/', (params) => {
  *   return <div>`${params.foo + params.bar}`</div>;
  * })
- * .add('test', '/act/:foo/hoge', (params) => {
+ * .at('test', '/act/:foo/hoge', (params) => {
  *   return <div>`${params.foo + params.bar}`</div>;
  * })
- * .add('test2', '/act/:foo/hoge/:bar/baz', (params) => {
+ * .at('test2', '/act/:foo/hoge/:bar/baz', (params) => {
  *   return <div>`${params.foo + params.bar}`</div>;
  * })
  * // Group related routes with a common prefix
- * .group('/api', (apiRouter) => {
+ * .group('api', '/api', (apiRouter) => {
  *   return apiRouter
- *     .route('users', '/users', (params) => {
+ *     .at('users', '/users', (params) => {
  *       return <div>API Users List</div>;
  *     })
- *     .route('user-detail', '/users/:userId', (params) => {
+ *     .at('user-detail', '/users/:userId', (params) => {
  *       return <div>User {params.userId} Details</div>;
  *     });
  * });
  *
- * funcion App() {
+ * function App() {
  *   const route = useRouter(r);
  *   return <div>{route}</div>;
  * }
@@ -91,7 +90,7 @@ class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction
     this.layout = layout;
   }
 
-  public route<const Key extends string, const Path extends InnerPathRestriction>(
+  public at<const Key extends string, const Path extends InnerPathRestriction>(
     key: Key,
     path: Path,
     render: (params: PathParser<`${PathPrefix}${Path}`>) => ReactNode,
@@ -119,16 +118,7 @@ class Router<Routings extends Record<string, Routing<string>>> {
     this.routings = route;
   }
 
-  public route<const Key extends string, const Path extends string>(
-    key: Key,
-    path: Path,
-    render: (params: PathParser<Path>) => ReactNode,
-  ): Router<Routings & {[k in Key]: Routing<Path>}> {
-    return this.add(key, path, render);
-  }
-
-  /** @deprecated Use `route` instead. */
-  public add<const Key extends string, const Path extends string>(
+  public at<const Key extends string, const Path extends string>(
     key: Key,
     path: Path,
     render: (params: PathParser<Path>) => ReactNode,

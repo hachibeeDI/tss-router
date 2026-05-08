@@ -18,22 +18,21 @@ $ npm install --save tss-route-lib
 ## Code example
 
 ```tsx
-import { createBrowserHistory } from 'history';
-import { route, useRouter, RouteProvider, routingHooksFactory } from 'tss-router';
+import { route, useRouter, RouteProvider, routingHooksFactory, createBrowserHistory } from 'tss-router';
 
 // Define your routes with type-safe parameters
 const router = route('root', '/', () => <div>Home Page</div>)
-  .add('users', '/users', () => <div>Users List</div>)
-  .add('userDetail', '/users/:userId', (params) => (
+  .at('users', '/users', () => <div>Users List</div>)
+  .at('userDetail', '/users/:userId', (params) => (
     <div>User Details for ID: {params.userId}</div>
   ))
-  .add('userPosts', '/users/:userId/posts/:postId', (params) => (
+  .at('userPosts', '/users/:userId/posts/:postId', (params) => (
     <div>
       Posts for user {params.userId}
       {params.postId && <span> - Viewing post {params.postId}</span>}
     </div>
   ))
-  .add('searchProducts', '/products?query=query&category=category&sort=sort', (params) => (
+  .at('searchProducts', '/products?query=query&category=category&sort=sort', (params) => (
     <div>
       Product search results
       {params.$search.query && <span> for: {params.$search.query}</span>}

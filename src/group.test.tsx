@@ -24,9 +24,9 @@ describe('Router.group', () => {
     const router = route('root', '/', () => <div>Root Page</div>)
       .group('root', '/admin', (adminRouter) =>
         adminRouter
-          .route('/dashboard', '/', () => <div>Admin Dashboard</div>)
-          .route('/admin-users', '/users', () => <div>Admin Users</div>)
-          .route('/user-detail', '/users/:userId', (params) => <div>User {params.userId}</div>),
+          .at('/dashboard', '/', () => <div>Admin Dashboard</div>)
+          .at('/admin-users', '/users', () => <div>Admin Users</div>)
+          .at('/user-detail', '/users/:userId', (params) => <div>User {params.userId}</div>),
       )
       .group(
         'api',
@@ -39,10 +39,10 @@ describe('Router.group', () => {
               <section>{children}</section>
             </div>
           ),
-          render: (apiRouter) => apiRouter.route('/v1-users', '/v1/users', () => <div>API v1 Users</div>),
+          render: (apiRouter) => apiRouter.at('/v1-users', '/v1/users', () => <div>API v1 Users</div>),
         },
         // // Test nested group
-        // .group('/v2', (v2Router) => v2Router.route('users', '/users', () => <div >API v2 Users</div>)),
+        // .group('/v2', (v2Router) => v2Router.at('users', '/users', () => <div >API v2 Users</div>)),
       );
 
     // Debug: Output router information
@@ -105,8 +105,8 @@ describe('Router.group', () => {
       ),
       render: (usersRouter) =>
         usersRouter
-          .route('/user-detail', '/profile', (params) => <div data-testid="user-id">{params.userId}</div>)
-          .route('/user-posts', '/posts/:postId', (params) => (
+          .at('/user-detail', '/profile', (params) => <div data-testid="user-id">{params.userId}</div>)
+          .at('/user-posts', '/posts/:postId', (params) => (
             <div>
               <div data-testid="user-id">{params.userId}</div>
               <div data-testid="post-id">{params.postId}</div>

@@ -17,14 +17,14 @@ import {
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
-    .add('test', '/act/:foo/hoge/:bar/baz', (params) => (
+    .at('test', '/act/:foo/hoge/:bar/baz', (params) => (
       <div>
         <div>This is test1</div>
         <div>{`foo=${params.foo}, bar=${params.bar}`}</div>
       </div>
     ))
-    .add('test2', '/abcdef', (_params) => <div>This is test2</div>)
-    .add('user', '/user/:id?limit=x&query=y', (params) => (
+    .at('test2', '/abcdef', (_params) => <div>This is test2</div>)
+    .at('user', '/user/:id?limit=x&query=y', (params) => (
       <div>
         <div>This is user</div>
         <div>user id = {params.id}</div>
@@ -32,7 +32,7 @@ describe('route', () => {
         <div>search.query={params.$search.query ?? 'nasi!'}</div>
       </div>
     ))
-    .add('test3', '/root/:abuba/ro/:foo', (params) => (
+    .at('test3', '/root/:abuba/ro/:foo', (params) => (
       <div>
         <div>This is test3</div>
         <div>
@@ -50,8 +50,8 @@ describe('route', () => {
       ),
       render: (g) =>
         g
-          .route('/detail', '/detail', ({id}) => <div>This is article detail {id}</div>, {foo: 'detail for'})
-          .route(
+          .at('/detail', '/detail', ({id}) => <div>This is article detail {id}</div>, {foo: 'detail for'})
+          .at(
             '/edit',
             '/edit',
             ({id}) => <div>edit article {id}</div>,
@@ -185,7 +185,7 @@ describe('route', () => {
 
 describe('Router resolution', () => {
   test('throws LocationNotFoundError when no registered route matches', () => {
-    const router = route('home', '/', () => <div>home</div>).add('users', '/users', () => <div>users</div>);
+    const router = route('home', '/', () => <div>home</div>).at('users', '/users', () => <div>users</div>);
 
     let caught: unknown;
     try {
@@ -203,7 +203,7 @@ describe('Router resolution', () => {
   test('first registered matching route wins', () => {
     // Two routes match /users/123: a placeholder route and a literal route
     // registered after it. The placeholder is registered first so it should win.
-    const router = route('detail', '/users/:id', (params) => <div>detail {params.id}</div>).add('me', '/users/me', () => <div>me</div>);
+    const router = route('detail', '/users/:id', (params) => <div>detail {params.id}</div>).at('me', '/users/me', () => <div>me</div>);
 
     const node = router.render({pathname: '/users/me', search: '', hash: '', state: undefined, key: ''});
     render(<>{node}</>);
@@ -231,7 +231,7 @@ describe('Router resolution', () => {
 
   test('pathname matching ignores the URL hash', () => {
     // Hash lives on location.hash, not pathname, so it should never affect routing
-    const router = route('home', '/', () => <div>home</div>).add('about', '/about', () => <div>about</div>);
+    const router = route('home', '/', () => <div>home</div>).at('about', '/about', () => <div>about</div>);
 
     const node = router.render({pathname: '/about', search: '', hash: '#section', state: undefined, key: ''});
     render(<>{node}</>);
