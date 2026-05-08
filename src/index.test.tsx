@@ -5,15 +5,7 @@ import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
-import {
-  RouteProvider,
-  useRouter,
-  route,
-  routingHooksFactory,
-  LocationNotFoundError,
-  isLocationNotFoundError,
-  createMemoryHistory,
-} from './index';
+import {route, routingHooksFactory, LocationNotFoundError, isLocationNotFoundError, createMemoryHistory} from './index';
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
@@ -58,7 +50,7 @@ describe('route', () => {
             (params) => ({foo: `edit bar id=${params.id}`}),
           ),
     });
-  const {Link, useNavigate} = routingHooksFactory(router);
+  const {RouteProvider, useRouter, Link, useNavigate} = routingHooksFactory(router);
 
   test('works fine', async () => {
     const history = createMemoryHistory();
@@ -67,7 +59,7 @@ describe('route', () => {
     }
 
     function App() {
-      const r = useRouter(router);
+      const r = useRouter();
       const nav = useNavigate();
       return (
         <div>
@@ -236,5 +228,97 @@ describe('Router resolution', () => {
     const node = router.render({pathname: '/about', search: '', hash: '#section', state: undefined, key: ''});
     render(<>{node}</>);
     expect(screen.queryByText('about')).toBeInTheDocument();
+  });
+});
+
+describe('useMatch', () => {
+  const router = route('home', '/', () => null)
+    .at('user', '/users/:id', () => null)
+    .at('post', '/users/:userId/posts/:postId', () => null)
+    .at('search', '/products?q=q', () => null);
+  const {RouteProvider, useMatch} = routingHooksFactory(router);
+
+  function renderHook<T>(useHookValue: () => T, initialPath: string): {result: {current: T}} {
+    const result: {current: T} = {current: undefined as any};
+    function Probe() {
+      result.current = useHookValue();
+      return null;
+    }
+    const history = createMemoryHistory({initialEntries: [initialPath]});
+    render(
+      <RouteProvider history={history}>
+        <Probe />
+      </RouteProvider>,
+    );
+    return {result};
+  }
+
+  test('no-arg form returns the rendered route key and typed params', () => {
+    const {result} = renderHook(() => useMatch(), '/users/42');
+    expect(result.current).not.toBeNull();
+    if (result.current && result.current.key === 'user') {
+      // params should be typed as {id: string}
+      expect(result.current.params.id).toBe('42');
+    } else {
+      throw new Error('expected key=user');
+    }
+  });
+
+  test('no-arg form returns null when nothing matches', () => {
+    const {result} = renderHook(() => useMatch(), '/missing');
+    expect(result.current).toBeNull();
+  });
+
+  test('keyed form returns params when the named route is the one rendered', () => {
+    const {result} = renderHook(() => useMatch('user'), '/users/7');
+    expect(result.current).toEqual({id: '7'});
+  });
+
+  test('keyed form returns null when a different route matches', () => {
+    const {result} = renderHook(() => useMatch('home'), '/users/7');
+    expect(result.current).toBeNull();
+  });
+
+  test('keyed form returns null when nothing matches at all', () => {
+    const {result} = renderHook(() => useMatch('user'), '/missing');
+    expect(result.current).toBeNull();
+  });
+
+  test('extracts $search params for the matched route', () => {
+    const {result} = renderHook(() => useMatch('search'), '/products?q=shoes');
+    expect(result.current).toEqual({$search: {q: 'shoes'}});
+  });
+});
+
+describe('useMatch — registration order', () => {
+  // /users/:id is registered before /users/me, so /users/me resolves to user
+  const router = route('user', '/users/:id', () => null).at('me', '/users/me', () => null);
+  const {RouteProvider, useMatch} = routingHooksFactory(router);
+
+  function renderHook<T>(useHookValue: () => T, initialPath: string): {result: {current: T}} {
+    const result: {current: T} = {current: undefined as any};
+    function Probe() {
+      result.current = useHookValue();
+      return null;
+    }
+    const history = createMemoryHistory({initialEntries: [initialPath]});
+    render(
+      <RouteProvider history={history}>
+        <Probe />
+      </RouteProvider>,
+    );
+    return {result};
+  }
+
+  test('first registered matching route wins', () => {
+    const {result} = renderHook(() => useMatch(), '/users/me');
+    expect(result.current).toEqual({key: 'user', params: {id: 'me'}});
+  });
+
+  test('keyed form respects shadowing — shadowed route returns null even if its pattern would match', () => {
+    // /users/me technically matches the `me` pattern, but the rendered route is `user`,
+    // so useMatch('me') must return null to stay consistent with useRouter.
+    const {result} = renderHook(() => useMatch('me'), '/users/me');
+    expect(result.current).toBeNull();
   });
 });

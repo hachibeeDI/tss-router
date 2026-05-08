@@ -1,7 +1,7 @@
 import {render, screen} from '@testing-library/react';
 import {describe, it, expect, beforeEach} from 'vitest';
 
-import {route, RouteProvider, useRouter, createMemoryHistory} from './index';
+import {route, routingHooksFactory, createMemoryHistory} from './index';
 
 // Debug function to inspect router
 function dumpRouterInfo(router: any) {
@@ -45,12 +45,14 @@ describe('Router.group', () => {
         // .group('/v2', (v2Router) => v2Router.at('users', '/users', () => <div >API v2 Users</div>)),
       );
 
+    const {RouteProvider, useRouter} = routingHooksFactory(router);
+
     // Debug: Output router information
     dumpRouterInfo(router);
 
     // Test component that uses the router
     function App() {
-      const renderedRoute = useRouter(router);
+      const renderedRoute = useRouter();
       return <div>{renderedRoute}</div>;
     }
 
@@ -114,12 +116,14 @@ describe('Router.group', () => {
           )),
     });
 
+    const {RouteProvider, useRouter} = routingHooksFactory(router);
+
     // Debug: Output router information
     dumpRouterInfo(router);
 
     // Test component that uses the router
     function App() {
-      const renderedRoute = useRouter(router);
+      const renderedRoute = useRouter();
       return <div>{renderedRoute}</div>;
     }
 

@@ -1,13 +1,17 @@
 # Navigation
 
-`routingHooksFactory(router)` returns a `Link` component, `useNavigate`, and
-`useRedirect` — all bound to your router's exact routing types.
+`routingHooksFactory(router)` returns a Provider, hooks, and a `Link`
+component — all bound to your router's exact routing types.
 
 ```ts
 import {routingHooksFactory} from 'tss-route-lib';
 
-const {Link, useNavigate, useRedirect} = routingHooksFactory(router);
+const {RouteProvider, useRouter, useMatch, useNavigate, useRedirect, Link} = routingHooksFactory(router);
 ```
+
+You typically call this once at module scope (e.g. in `routes.tsx`) and
+import the destructured pieces from there. Components never need to import
+the router itself.
 
 ## `<Link>`
 
@@ -90,9 +94,33 @@ function BackButton() {
 `useLocation` is implemented with `useSyncExternalStore`, so re-renders are
 tied to history updates without a global subscription.
 
+## Knowing what's matched
+
+`useMatch` returns the route currently being rendered, so you can drive UI
+state (active nav links, breadcrumbs) without parsing the URL yourself.
+
+```tsx
+// Boolean — am I on this route?
+const onUserPage = useMatch('user') != null;
+
+// Discriminated union — which route, and what params?
+const match = useMatch();
+if (match?.key === 'user') {
+  console.log(match.params.id); // typed as string
+}
+```
+
+The keyed form is the right fit for `<Link>` active-state styling. The
+no-arg form pairs well with `switch (match?.key)` patterns in layout
+components.
+
+Resolution matches `useRouter` exactly: registration order, first match wins.
+A shadowed route returns `null` even when its pattern would match in
+isolation.
+
 ## Why no `<Outlet />`?
 
-Routes in tss-router render through `useRouter(router)`. There is no nested
-route element tree — composition is done in plain JSX or via `.group(...)`
+Routes in tss-router render through `useRouter()`. There is no nested route
+element tree — composition is done in plain JSX or via `.group(...)`
 layouts. If you've used React Router, the mental model is "one router, one
 render call".

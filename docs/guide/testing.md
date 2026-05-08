@@ -9,16 +9,16 @@ test renderer provides.
 ```tsx
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {RouteProvider, createMemoryHistory, route, routingHooksFactory, useRouter} from 'tss-route-lib';
+import {createMemoryHistory, route, routingHooksFactory} from 'tss-route-lib';
 
 const router = route('home', '/', () => <div>Home</div>)
   .at('user', '/users/:id', (p) => <div>User {p.id}</div>);
-const {Link} = routingHooksFactory(router);
+const {RouteProvider, useRouter, Link} = routingHooksFactory(router);
 
 test('navigates to a user', async () => {
   const history = createMemoryHistory();
   function App() {
-    return useRouter(router);
+    return useRouter();
   }
 
   render(

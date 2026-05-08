@@ -6,8 +6,9 @@ interface and you swap them at the application root.
 ## Browser history
 
 ```ts
-import {createBrowserHistory, RouteProvider} from 'tss-route-lib';
+import {createBrowserHistory} from 'tss-route-lib';
 
+// `RouteProvider` comes from `routingHooksFactory(router)` — see Getting Started.
 const history = createBrowserHistory();
 
 <RouteProvider history={history}>

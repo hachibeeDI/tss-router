@@ -18,7 +18,7 @@ $ npm install --save tss-route-lib
 ## Code example
 
 ```tsx
-import { route, useRouter, RouteProvider, routingHooksFactory, createBrowserHistory } from 'tss-router';
+import { route, routingHooksFactory, createBrowserHistory } from 'tss-router';
 
 // Define your routes with type-safe parameters
 const router = route('root', '/', () => <div>Home Page</div>)
@@ -41,30 +41,30 @@ const router = route('root', '/', () => <div>Home Page</div>)
     </div>
   ));
 
-// Create navigation hooks
-const { useNavigate, useRedirect, Link } = routingHooksFactory(router);
+// Build the typed toolkit (Provider + hooks + Link) for this router.
+const { RouteProvider, useRouter, useNavigate, Link } = routingHooksFactory(router);
 
 // Navigation component with type-safe links
 function Navigation() {
   const navigate = useNavigate();
-  
+
   return (
     <nav>
       {/* Regular links with automatic navigation */}
       <Link route="root">Home</Link>
       <Link route="users">Users</Link>
-      <Link route="userDetail" args={{ userId: "123" }}>User 123</Link>
-      
+      <Link route="userDetail" params={{ userId: "123" }}>User 123</Link>
+
       {/* Link with search parameters */}
-      <Link route="searchProducts" args={{$search: {query: "laptop", category: "electronics", sort: "price" }}}>
+      <Link route="searchProducts" params={{$search: {query: "laptop", category: "electronics", sort: "price" }}}>
         Search Electronics
       </Link>
-      
+
       {/* Programmatic navigation */}
       <button onClick={() => navigate('userPosts', { userId: "123", postId: "456" })}>
         View User 123's Post 456
       </button>
-      
+
       {/* Programmatic navigation with search parameters */}
       <button onClick={() => navigate('searchProducts', {$search: {query: "shoes", sort: "newest" }})}>
         Search for shoes
@@ -75,11 +75,11 @@ function Navigation() {
 
 // Main application
 function App() {
-  const route = useRouter(router);
+  const view = useRouter();
   return (
     <div>
       <Navigation />
-      <main>{route}</main>
+      <main>{view}</main>
     </div>
   );
 }

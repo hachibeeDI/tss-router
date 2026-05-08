@@ -31,16 +31,17 @@ package.
 ## Quick start
 
 ```tsx
-import {RouteProvider, createBrowserHistory, route, routingHooksFactory, useRouter} from 'tss-route-lib';
+import {createBrowserHistory, route, routingHooksFactory} from 'tss-route-lib';
 
 const router = route('home', '/', () => <div>Home</div>)
   .at('user', '/users/:id', (params) => <div>User {params.id}</div>)
   .at('search', '/search?q=q', (params) => <div>Searching: {params.$search.q ?? '(none)'}</div>);
 
-const {Link, useNavigate} = routingHooksFactory(router);
+// One factory call returns everything you need: Provider, hooks, and Link.
+const {RouteProvider, useRouter, useNavigate, Link} = routingHooksFactory(router);
 
 function App() {
-  const view = useRouter(router);
+  const view = useRouter();
   const navigate = useNavigate();
 
   return (
@@ -65,6 +66,22 @@ function Main() {
   );
 }
 ```
+
+## How the factory call works
+
+`routingHooksFactory(router)` is the single binding point between your router
+definition and your components. It returns:
+
+- `RouteProvider` — wraps the app and supplies history to descendant hooks
+- `useRouter()` — renders the route matching the current location
+- `useMatch()` / `useMatch(key)` — read the active route or test a specific one
+- `useNavigate()` / `useRedirect()` — programmatic navigation
+- `Link` — type-safe `<a>`
+
+Because the router lives inside the factory's closure, **components never
+import the router itself** — they import the hooks/components from wherever
+you keep your factory output. This avoids circular imports between
+`routes.tsx` and the components rendered by your routes.
 
 ## What you get from this snippet
 

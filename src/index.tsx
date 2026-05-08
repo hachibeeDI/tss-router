@@ -1,7 +1,7 @@
 /**
  * sample:
  * ```typescript
- * import {route, useRouter, RouteProvider, createBrowserHistory} from 'tss-router';
+ * import {route, routingHooksFactory, createBrowserHistory} from 'tss-router';
  *
  * const r = route('root', '/', (params) => {
  *   return <div>`${params.foo + params.bar}`</div>;
@@ -23,9 +23,11 @@
  *     });
  * });
  *
+ * const {RouteProvider, useRouter} = routingHooksFactory(r);
+ *
  * function App() {
- *   const route = useRouter(r);
- *   return <div>{route}</div>;
+ *   const view = useRouter();
+ *   return <div>{view}</div>;
  * }
  *
  * function Main() {
@@ -189,14 +191,10 @@ type RouteProviderProps = {
   children: ReactNode;
 };
 
-export function RouteProvider({history, children}: RouteProviderProps) {
-  return <HistoryContext.Provider value={{history}}>{children}</HistoryContext.Provider>;
-}
-
 export function useHistory(): History {
   const ctx = use(HistoryContext);
   if (ctx == null) {
-    throw new AssertionError({message: 'tss-router functions must be used within under a <RouteProvider /> Context.'});
+    throw new AssertionError({message: 'tss-router hooks must be used inside the RouteProvider returned from routingHooksFactory.'});
   }
   return ctx?.history;
 }
@@ -222,10 +220,44 @@ type RouteProps<Routings extends Record<string, Routing<string>>, Key extends st
 export type LinkProps<Routings extends Record<string, Routing<string>>, Key extends Extract<keyof Routings, string>> = ComponentProps<'a'> &
   RouteProps<Routings, Key>;
 
+type MatchOf<Routings extends Record<string, Routing<string>>> = {
+  [K in keyof Routings]: {key: K; params: PathParser<Routings[K]['path']>};
+}[keyof Routings];
+
 /**
+ * Builds the typed router toolkit (Provider, hooks, Link) for a given router.
  *
+ * Call this once at module scope and import the returned `RouteProvider`,
+ * `useRouter`, `useMatch`, `useNavigate`, `useRedirect`, and `Link` everywhere
+ * you need them. The router lives inside the factory's closure, so consuming
+ * components never have to import the router itself — that's how circular
+ * imports between `routes.ts` and route render components are avoided.
  */
 export function routingHooksFactory<Routings extends Record<string, Routing<string>>>(router: Router<Routings>) {
+  function RouteProvider({history, children}: RouteProviderProps) {
+    return <HistoryContext.Provider value={{history}}>{children}</HistoryContext.Provider>;
+  }
+
+  function useRouter(): ReactNode {
+    const loc = useLocation();
+    return router.render(loc);
+  }
+
+  function useMatch(): MatchOf<Routings> | null;
+  function useMatch<Key extends Extract<keyof Routings, string>>(key: Key): PathParser<Routings[Key]['path']> | null;
+  function useMatch(key?: string): unknown {
+    const loc = useLocation();
+    for (const [k, routing] of Object.entries(router.routings)) {
+      if (routing.match(loc.pathname)) {
+        if (key !== undefined) {
+          return k === key ? routing.extractParams(loc) : null;
+        }
+        return {key: k, params: routing.extractParams(loc)};
+      }
+    }
+    return null;
+  }
+
   function createUseRouteOperation(operation: 'push' | 'replace') {
     return function useRouteOperation() {
       const histCtx = useHistory();
@@ -280,14 +312,11 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
   }
 
   return {
+    RouteProvider,
+    useRouter,
+    useMatch,
     useNavigate: createUseRouteOperation('push'),
     useRedirect: createUseRouteOperation('replace'),
     Link,
   };
-}
-
-export function useRouter<Routings extends Record<string, Routing<string>>>(router: Router<Routings>) {
-  const loc = useLocation();
-
-  return router.render(loc);
 }

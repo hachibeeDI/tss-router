@@ -26,8 +26,9 @@ key is a compile error — never a runtime surprise.
 ### Simple API
 
 `route(...)` to start a router, `.at(...)` to add routes, `.group(...)` to
-compose them, `routingHooksFactory(router)` for `Link` / `useNavigate` /
-`useRedirect`. Plus `useRouter`, `useLocation`, `useHistory`. That's the
+compose them. One call to `routingHooksFactory(router)` returns the
+`RouteProvider`, `useRouter`, `useMatch`, `useNavigate`, `useRedirect`, and
+`Link`. Plus `useLocation` / `useHistory` if you need raw access. That's the
 whole public surface.
 
 ### Tiny and readable

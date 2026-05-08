@@ -62,10 +62,64 @@ Resolves the registered route for `location.pathname` and returns a
 
 ## `routingHooksFactory(router)`
 
-Returns components and hooks bound to the router's types.
+The single binding point between a router and the app. Returns a Provider,
+hooks, and a `Link` component — all typed via the router passed in.
 
 ```ts
-const {Link, useNavigate, useRedirect} = routingHooksFactory(router);
+const {RouteProvider, useRouter, useMatch, useNavigate, useRedirect, Link} = routingHooksFactory(router);
+```
+
+Because the router lives inside the factory's closure, components don't need
+to import the router itself; they only import the destructured outputs.
+
+### `RouteProvider`
+
+```ts
+function RouteProvider(props: {history: History; children: ReactNode}): JSX.Element;
+```
+
+Wraps the app and provides the history instance. Every other hook from the
+factory (and `useLocation` / `useHistory` from the package) must run under
+this Provider.
+
+### `useRouter()`
+
+```ts
+function useRouter(): ReactNode;
+```
+
+Subscribes to history updates and renders the route matching the current
+location. Throws `LocationNotFoundError` if nothing matches.
+
+### `useMatch()` / `useMatch(key)`
+
+```ts
+function useMatch(): {key: keyof R; params: ...} | null;
+function useMatch<K extends keyof R>(key: K): PathParser<R[K]['path']> | null;
+```
+
+Returns information about the route currently being rendered.
+
+- **No-arg**: returns `{key, params}` for whichever route matches, or `null`.
+  `key` is a discriminated union of all route keys, so `params` is typed
+  precisely once you narrow on `key`.
+- **Keyed**: returns the typed `params` iff `key` is the route currently
+  being rendered, otherwise `null`. This is the form you want for nav-link
+  active states.
+
+Resolution mirrors `useRouter` — registration order, first match wins. A route
+that's *shadowed* by an earlier registration returns `null` even though its
+pattern would match.
+
+```tsx
+// Highlight the active link
+const onUserPage = useMatch('user') != null;
+
+// Read params and key together
+const m = useMatch();
+if (m?.key === 'user') {
+  console.log(m.params.id); // typed as string
+}
 ```
 
 ### `Link`
@@ -85,32 +139,14 @@ Type-safe anchor. Props:
 Return `(key, params?) => void`. `useNavigate` calls `history.push`;
 `useRedirect` calls `history.replace`.
 
-## `RouteProvider`
-
-```ts
-function RouteProvider(props: {history: History; children: ReactNode}): JSX.Element;
-```
-
-Provides the history instance to descendant hooks. Must wrap any component
-that uses `useRouter`, `useLocation`, `useHistory`, or
-`routingHooksFactory(...)` outputs.
-
-## `useRouter(router)`
-
-```ts
-function useRouter<R extends Record<string, Routing<string>>>(router: Router<R>): ReactNode;
-```
-
-Subscribes to history updates and renders the route matching the current
-location. Throws `LocationNotFoundError` if nothing matches.
-
 ## `useLocation()`
 
 ```ts
 function useLocation(): Location;
 ```
 
-Returns the current `Location` and re-renders on history changes.
+Returns the current `Location` and re-renders on history changes. Top-level
+export — works under any `RouteProvider`, regardless of the router.
 
 ## `useHistory()`
 
@@ -119,7 +155,7 @@ function useHistory(): History;
 ```
 
 Returns the raw `History` from context. Useful for `back()`, `forward()`, and
-storing `state` alongside navigations.
+storing `state` alongside navigations. Top-level export.
 
 ## `LocationNotFoundError` / `isLocationNotFoundError(err)`
 
