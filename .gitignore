@@ -132,6 +132,10 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
+
 ### Node Patch ###
 # Serverless Webpack directories
 .webpack/
