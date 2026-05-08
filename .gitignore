@@ -136,6 +136,9 @@ dist
 docs/.vitepress/dist
 docs/.vitepress/cache
 
+# Vitest coverage
+coverage/
+
 ### Node Patch ###
 # Serverless Webpack directories
 .webpack/
