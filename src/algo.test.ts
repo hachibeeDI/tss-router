@@ -131,6 +131,32 @@ describe('url builder', () => {
     ).toBe('/users/abc?q=hi');
   });
 
+  test('omits trailing "?" when $search is an empty object', () => {
+    expect(
+      pathAlgorithmFactory('/users/:id?q=q').urlBuilder({
+        id: 'abc',
+        $search: {},
+      } as never),
+    ).toBe('/users/abc');
+  });
+
+  test('drops nullish $search entries instead of emitting "key=undefined"', () => {
+    expect(
+      pathAlgorithmFactory('/users/:id?q=q&limit=limit').urlBuilder({
+        id: 'abc',
+        $search: {q: 'hi', limit: undefined},
+      } as never),
+    ).toBe('/users/abc?q=hi');
+
+    // all entries nullish -> no trailing "?"
+    expect(
+      pathAlgorithmFactory('/users/:id?q=q&limit=limit').urlBuilder({
+        id: 'abc',
+        $search: {q: undefined, limit: undefined},
+      } as never),
+    ).toBe('/users/abc');
+  });
+
   describe('route builder typing', () => {
     test('works fine', () => {
       buildRoute('/act/:foo/hoge/:bar/baz', (args) => {

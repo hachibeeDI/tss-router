@@ -40,9 +40,14 @@ export function pathAlgorithmFactory<Path extends string>(path: Path) {
     urlBuilder: (params: PathParser<Path>) => {
       let paramPart = '';
       if ('$search' in params && params.$search != null) {
-        paramPart = `?${Object.entries(params.$search)
-          .map(([k, v]) => `${k}=${v}`)
-          .join('&')}`;
+        // Drop entries whose value is null/undefined so the resulting URL
+        // never contains "?key=undefined" or a bare trailing "?".
+        const pairs = Object.entries(params.$search)
+          .filter(([_, v]) => v != null)
+          .map(([k, v]) => `${k}=${v}`);
+        if (pairs.length > 0) {
+          paramPart = `?${pairs.join('&')}`;
+        }
       }
 
       // Split path into segments and handle URL params
