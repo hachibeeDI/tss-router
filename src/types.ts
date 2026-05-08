@@ -30,52 +30,34 @@ type Path = {
   hash: string;
 };
 
-/**
- * expect History.Location but you can use any compatible alternatives
- */
 export type Location = Path & {
   state: unknown;
   key: string;
 };
 
-type To = string | Partial<Path>;
+export type To = string | Partial<Path>;
 
-type HistoryActions = 'PUSH' | 'REPLACE' | 'POP';
+export type HistoryAction = 'PUSH' | 'REPLACE' | 'POP';
 
-/**
- * A change to the current location.
- */
-type Update = {
-  /**
-   * The action that triggered the change.
-   */
-  action: HistoryActions;
-  /**
-   * The new location.
-   */
+export type Update = {
+  action: HistoryAction;
   location: Location;
 };
 
 /**
- * Assum remix-run/history, but you can choose any alternative.
- * Or write your wrapper.
- *
- * Looks like remix-run/history has bunch of unnecessary dependencies and is going to be obsolete.
- * Propbabry I need to make better solution with zero dependency.
- *
- * FIXME: Too awkward...
+ * The minimal surface that the router needs. Implement this directly if you
+ * want to plug in a custom history; otherwise use `createBrowserHistory` /
+ * `createMemoryHistory` from this package.
  */
 export type History = {
-  action: HistoryActions;
-  location: Location;
+  readonly action: HistoryAction;
+  readonly location: Location;
   push: (to: To, state?: unknown) => void;
   replace: (to: To, state?: unknown) => void;
-  listen: (listener: (location: Update) => void) => () => void;
-  createHref(to: To): string;
-  go(delta: number): void;
-  back(): void;
-  forward(): void;
-  block(blocker: (tx: Update & {retry: VoidFunction}) => void): () => void;
+  listen: (listener: (update: Update) => void) => () => void;
+  go: (delta: number) => void;
+  back: () => void;
+  forward: () => void;
 };
 
 /**

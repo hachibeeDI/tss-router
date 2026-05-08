@@ -48,6 +48,10 @@ import {createContext, use, useSyncExternalStore} from 'react';
 import {buildRoute, isModifiedEvent} from './algo';
 import type {PathParser, Routing, History} from './types';
 
+export {createBrowserHistory, createMemoryHistory} from './history';
+export type {MemoryHistory, MemoryHistoryOptions} from './history';
+export type {History, HistoryAction, Location, To, Update} from './types';
+
 type AsOptionalparamsIf<T> = keyof T extends never ? [] : [T];
 
 export class LocationNotFoundError extends Error {
