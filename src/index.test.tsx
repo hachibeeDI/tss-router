@@ -6,7 +6,7 @@ import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
-import {RouteProvider, useRouter, route, routingHooksFactory} from './index';
+import {RouteProvider, useRouter, route, routingHooksFactory, LocationNotFoundError, isLocationNotFoundError} from './index';
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
@@ -176,10 +176,37 @@ describe('route', () => {
   });
 });
 
-describe('Router resolution regressions', () => {
+describe('Router resolution', () => {
+  test('throws LocationNotFoundError when no registered route matches', () => {
+    const router = route('home', '/', () => <div>home</div>).add('users', '/users', () => <div>users</div>);
+
+    let caught: unknown;
+    try {
+      router.render({pathname: '/missing', search: '', hash: '', state: undefined, key: ''});
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(LocationNotFoundError);
+    expect(isLocationNotFoundError(caught)).toBe(true);
+    if (isLocationNotFoundError(caught)) {
+      expect(caught.location.pathname).toBe('/missing');
+    }
+  });
+
+  test('first registered matching route wins', () => {
+    // Two routes match /users/123: a placeholder route and a literal route
+    // registered after it. The placeholder is registered first so it should win.
+    const router = route('detail', '/users/:id', (params) => <div>detail {params.id}</div>).add('me', '/users/me', () => <div>me</div>);
+
+    const node = router.render({pathname: '/users/me', search: '', hash: '', state: undefined, key: ''});
+    render(<>{node}</>);
+    expect(screen.queryByText('detail me')).toBeInTheDocument();
+    expect(screen.queryByText('me')).not.toBeInTheDocument();
+  });
+
   test('matches a route whose definition contains a query template', () => {
-    // The matcher used to leave the ?... portion in the last definition segment,
-    // which made these patterns unmatchable.
+    // Regression test for: the matcher used to leave the ?... portion in the
+    // last definition segment, which made these patterns unmatchable.
     const router = route('search', '/products?query=query&category=category', (params) => (
       <div>search q={params.$search.query ?? 'none'}</div>
     ));
@@ -193,5 +220,14 @@ describe('Router resolution regressions', () => {
     });
     render(<>{node}</>);
     expect(screen.queryByText('search q=laptop')).toBeInTheDocument();
+  });
+
+  test('pathname matching ignores the URL hash', () => {
+    // Hash lives on location.hash, not pathname, so it should never affect routing
+    const router = route('home', '/', () => <div>home</div>).add('about', '/about', () => <div>about</div>);
+
+    const node = router.render({pathname: '/about', search: '', hash: '#section', state: undefined, key: ''});
+    render(<>{node}</>);
+    expect(screen.queryByText('about')).toBeInTheDocument();
   });
 });
