@@ -2,6 +2,8 @@
 
 A type-safe, lightweight router for React applications that provides strong TypeScript support for route parameters.
 
+📖 **[Documentation](https://hachibeedi.github.io/tss-router/)** · [Getting Started](https://hachibeedi.github.io/tss-router/guide/getting-started) · [API Reference](https://hachibeedi.github.io/tss-router/api/)
+
 ## Features
 
 - **Type-safe route parameters**: Get compile-time checking for route parameters
