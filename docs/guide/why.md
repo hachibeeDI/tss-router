@@ -5,13 +5,43 @@ write your routes in TypeScript and want the compiler to catch every link,
 navigation, and parameter mismatch — without giving up the fluent, code-first
 style.
 
-## The design in one paragraph
+## Four pillars
 
-A path string is parsed at the type level. `'/users/:id?tab=tab'` produces
+Everything in this library follows from four ideas.
+
+### Code-first
+
+Routes are values composed in TypeScript with a fluent builder, not JSX
+elements or file-system conventions. The path string is written once, next to
+the component that renders it, and every other touch point (links,
+navigation, params) is derived from it.
+
+### Type-safe by construction
+
+A path string like `/users/:id?tab=tab` is parsed at the type level into
 `{id: string; $search: Partial<{tab: string}>}`. The same parser drives the
-render function, the `Link` component's `params` prop, and `useNavigate`. There
-is one source of truth (the path string), and it lives next to the component
-that renders it.
+render function, `<Link>`, and `useNavigate`. Forgetting a param or typo-ing a
+key is a compile error — never a runtime surprise.
+
+### Simple API
+
+`route(...)` to start a router, `.at(...)` to add routes, `.group(...)` to
+compose them, `routingHooksFactory(router)` for `Link` / `useNavigate` /
+`useRedirect`. Plus `useRouter`, `useLocation`, `useHistory`. That's the
+whole public surface.
+
+### Tiny and readable
+
+Under 700 lines of source across four files, with zero runtime dependencies
+(the browser/memory history is internal). When the docs aren't enough,
+reading the source is a realistic option — not a fallback you dread.
+
+## Source of truth
+
+Pick any param. Where does its type come from? It comes from one place: the
+path string. The render function, the `Link` props, and `useNavigate` all
+read from the same `PathParser<Path>`. There's no separate route schema, no
+codegen output, no JSON config to keep in sync.
 
 ## What it is not
 
