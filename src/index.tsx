@@ -116,6 +116,7 @@ class GroupRouter<KeyPrefix extends string, PathPrefix extends PrefixRestriction
 
 class Router<Routings extends Record<string, Routing<string>>> {
   public routings: Routings;
+  private fallbackRender: ((location: History['location']) => ReactNode) | null = null;
   constructor(route: Routings) {
     this.routings = route;
   }
@@ -129,6 +130,16 @@ class Router<Routings extends Record<string, Routing<string>>> {
     (this.routings as any)[key] = buildRoute(path, render);
 
     return this as any;
+  }
+
+  /**
+   * Registers a fallback renderer used when no registered route matches the
+   * current location. When set, `render` returns the fallback's output instead
+   * of throwing `LocationNotFoundError`.
+   */
+  public fallback(render: (location: History['location']) => ReactNode): this {
+    this.fallbackRender = render;
+    return this;
   }
 
   /**
@@ -169,6 +180,9 @@ class Router<Routings extends Record<string, Routing<string>>> {
   public render(target: History['location']): ReactNode {
     const found = Object.values(this.routings).find((routing) => routing.match(target.pathname));
     if (found == null) {
+      if (this.fallbackRender != null) {
+        return this.fallbackRender(target);
+      }
       throw new LocationNotFoundError(target);
     }
 

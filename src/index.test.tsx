@@ -192,6 +192,26 @@ describe('Router resolution', () => {
     }
   });
 
+  test('fallback render replaces the LocationNotFoundError on miss', () => {
+    const router = route('home', '/', () => <div>home</div>)
+      .at('users', '/users', () => <div>users</div>)
+      .fallback((loc) => <div>not found: {loc.pathname}</div>);
+
+    const node = router.render({pathname: '/missing', search: '', hash: '', state: undefined, key: ''});
+    render(<>{node}</>);
+    expect(screen.queryByText('not found: /missing')).toBeInTheDocument();
+  });
+
+  test('fallback does not run when a route matches', () => {
+    const fallback = vi.fn(() => <div>fallback</div>);
+    const router = route('home', '/', () => <div>home</div>).fallback(fallback);
+
+    const node = router.render({pathname: '/', search: '', hash: '', state: undefined, key: ''});
+    render(<>{node}</>);
+    expect(screen.queryByText('home')).toBeInTheDocument();
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
   test('first registered matching route wins', () => {
     // Two routes match /users/123: a placeholder route and a literal route
     // registered after it. The placeholder is registered first so it should win.
