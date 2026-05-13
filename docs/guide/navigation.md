@@ -118,6 +118,66 @@ Resolution matches `useRouter` exactly: registration order, first match wins.
 A shadowed route returns `null` even when its pattern would match in
 isolation.
 
+## Blocking navigations
+
+`useBlocker` intercepts navigations while a condition holds — typically
+"the form is dirty, confirm before leaving". It pauses the transition
+and hands you `proceed` / `reset` callbacks so you can render your own
+confirmation UI.
+
+```tsx
+import {useBlocker} from 'tss-route-lib';
+
+function EditForm() {
+  const [dirty, setDirty] = useState(false);
+  const blocker = useBlocker(dirty);
+
+  return (
+    <>
+      <textarea onChange={() => setDirty(true)} />
+
+      {blocker.state === 'blocked' && (
+        <Modal>
+          <p>You have unsaved changes. Leave anyway?</p>
+          <button onClick={blocker.proceed}>Leave</button>
+          <button onClick={blocker.reset}>Stay</button>
+        </Modal>
+      )}
+    </>
+  );
+}
+```
+
+`shouldBlock` can also be a predicate that inspects the pending
+transition:
+
+```ts
+useBlocker(({currentLocation, nextLocation, historyAction}) => {
+  // Only block leaving the editor, not internal moves within it.
+  return currentLocation.pathname.startsWith('/edit') && !nextLocation.pathname.startsWith('/edit');
+});
+```
+
+What gets blocked:
+
+- `Link` clicks and `useNavigate` / `useRedirect` calls
+- Browser back / forward (via `popstate`)
+
+What does **not** get blocked: tab close, page reload, navigation to an
+external URL. Use the standard `beforeunload` event for those — the
+browser's confirmation dialog is the only thing it'll respect anyway.
+
+Caveats:
+
+- Only one blocker can be active per `history` instance. Registering a
+  new one replaces the previous.
+- When `proceed` runs after a blocked `popstate`, the destination is
+  re-applied via `pushState`, so the back/forward delta is not preserved
+  exactly — `next` ends up as a new entry on the stack.
+
+See the [API reference](/api/#useblocker-shouldblock) for the full
+shape of the returned blocker state.
+
 ## Why no `<Outlet />`?
 
 Routes in tss-router render through `useRouter()`. There is no nested route

@@ -157,6 +157,43 @@ function useHistory(): History;
 Returns the raw `History` from context. Useful for `back()`, `forward()`, and
 storing `state` alongside navigations. Top-level export.
 
+## `useBlocker(shouldBlock)`
+
+```ts
+type BlockerFn = (args: {
+  currentLocation: Location;
+  nextLocation: Location;
+  historyAction: HistoryAction;
+}) => boolean;
+
+type BlockerState =
+  | {state: 'unblocked'; location: null; proceed: null; reset: null}
+  | {state: 'blocked'; location: Location; proceed: () => void; reset: () => void}
+  | {state: 'proceeding'; location: Location; proceed: null; reset: null};
+
+function useBlocker(shouldBlock: boolean | BlockerFn): BlockerState;
+```
+
+Intercepts navigations while `shouldBlock` is truthy. The returned state
+machine drives a confirmation UI:
+
+- `'unblocked'` — no transition pending.
+- `'blocked'` — a navigation is paused at `location`. Call `proceed()`
+  to run it, or `reset()` to cancel and stay put.
+- `'proceeding'` — `proceed()` was called and the navigation is in flight.
+
+`shouldBlock` may be a boolean or a predicate. The predicate runs on
+every pending transition, so you can decide per-target. The hook holds
+the latest predicate in a ref, so passing a fresh closure each render
+does **not** re-register the underlying blocker.
+
+Scope: blocks `push` / `replace` / `POP` (back/forward). Does **not**
+block tab close / reload / external navigation — use `beforeunload` for
+those.
+
+See [Blocking navigations](/guide/navigation#blocking-navigations) for
+usage patterns.
+
 ## `LocationNotFoundError` / `isLocationNotFoundError(err)`
 
 ```ts
@@ -228,11 +265,31 @@ type History = {
   push: (to: To, state?: unknown) => void;
   replace: (to: To, state?: unknown) => void;
   listen: (listener: (update: Update) => void) => () => void;
+  block: (blocker: Blocker) => () => void;
   go: (delta: number) => void;
   back: () => void;
   forward: () => void;
 };
 ```
+
+`block(blocker)` registers a transition guard and returns an unregister
+function. Only one blocker can be active at a time — registering a new
+one replaces the previous.
+
+### `Blocker` / `Transition`
+
+```ts
+type Transition = {
+  action: HistoryAction;
+  location: Location;
+  retry: () => void;
+};
+
+type Blocker = (tx: Transition) => void;
+```
+
+A `Blocker` receives the pending transition. The navigation only takes
+effect when the blocker calls `tx.retry()`; doing nothing cancels it.
 
 ### `Location` / `To` / `Update` / `HistoryAction`
 

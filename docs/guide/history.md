@@ -70,6 +70,30 @@ unsub();
 `useLocation()` already does this internally. You only need to call `listen`
 yourself for non-React code paths (analytics, logging, etc.).
 
+## Blocking transitions
+
+Both built-in histories implement `block(blocker)`. A registered blocker
+intercepts every `push` / `replace` / `POP` transition; the navigation
+only happens when the blocker calls `tx.retry()`.
+
+```ts
+const unblock = history.block((tx) => {
+  if (confirm(`Leave for ${tx.location.pathname}?`)) {
+    tx.retry();
+  }
+});
+
+// Later, when the guard is no longer needed:
+unblock();
+```
+
+For React, prefer [`useBlocker`](./navigation#blocking-navigations) — it
+wires the lifecycle for you and exposes a state machine instead of a
+synchronous `confirm`.
+
+Only one blocker can be active per history instance; registering a new
+one replaces the previous.
+
 ## Bring your own history
 
 The router only depends on the `History` type from `tss-route-lib`.
@@ -83,3 +107,7 @@ const myHistory: History = {
   /* ... */
 };
 ```
+
+If you don't need transition blocking, `block` can be a no-op that
+returns a no-op unsubscribe. Without it, `useBlocker` simply never
+transitions to `'blocked'`.
