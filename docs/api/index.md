@@ -50,6 +50,21 @@ router.group('users/', '/users/:userId', {
 });
 ```
 
+### `.fallback(render)`
+
+Registers a renderer used when no route matches the current location.
+
+```ts
+router.fallback((location) => <NotFound pathname={location.pathname} />);
+```
+
+When set, `Router.render` returns the fallback's output instead of throwing
+`LocationNotFoundError`. The callback receives the current `Location`.
+Calling `.fallback` twice replaces the previous handler.
+
+Group-scoped fallback (matching a group's prefix but none of its routes)
+is not implemented yet.
+
 ### `.buildUrl(key, params)`
 
 Builds a URL string for `key`, encoding path placeholders and serializing

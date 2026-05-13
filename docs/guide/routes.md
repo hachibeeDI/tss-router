@@ -50,9 +50,33 @@ If the order is wrong for your case, register more specific routes first.
 
 ## When no route matches
 
-`router.render(location)` throws `LocationNotFoundError`. The `useRouter` hook
-re-throws it, so it surfaces during render. You can catch it with an error
-boundary, or test for it explicitly:
+By default, `router.render(location)` throws `LocationNotFoundError` and the
+`useRouter` hook re-throws it during render. Two ways to handle this:
+
+### `.fallback(render)` — register a not-found view inline
+
+```tsx
+const router = route('home', '/', () => <div>Home</div>)
+  .at('user', '/users/:id', (p) => <div>User {p.id}</div>)
+  .fallback((loc) => <NotFound pathname={loc.pathname} />);
+```
+
+When `fallback` is set, the router renders it instead of throwing. The
+callback receives the current `Location`, so you can read `pathname` /
+`search` / `state` from the unmatched URL.
+
+This is the recommended approach for most apps.
+
+::: info Group-level fallback
+Currently `.fallback` lives on the top-level router. A group-scoped
+fallback (matching the group's prefix but none of its routes) isn't
+shipped yet — open an issue if you need it.
+:::
+
+### Error boundary — when you want to share handling with other render-time errors
+
+If you'd rather treat "not found" like any other thrown error, skip
+`fallback` and catch it explicitly:
 
 ```tsx
 import {isLocationNotFoundError} from 'tss-route-lib';
