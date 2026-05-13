@@ -1,4 +1,4 @@
-import {describe, expect, test, beforeEach} from 'vitest';
+import {describe, expect, test, beforeEach, vi} from 'vitest';
 
 import {createBrowserHistory, createMemoryHistory} from './history';
 
@@ -119,6 +119,80 @@ describe('createMemoryHistory', () => {
     h.push('/b');
     expect(h.location.key).not.toBe(aKey);
   });
+
+  test('block intercepts push and pauses navigation until retry', () => {
+    const h = createMemoryHistory();
+    const transitions: Array<{action: string; pathname: string}> = [];
+    h.block((tx) => {
+      transitions.push({action: tx.action, pathname: tx.location.pathname});
+    });
+
+    h.push('/blocked');
+    // Push was intercepted — current location and stack unchanged
+    expect(h.location.pathname).toBe('/');
+    expect(h.entries.length).toBe(1);
+    expect(transitions).toEqual([{action: 'PUSH', pathname: '/blocked'}]);
+  });
+
+  test('block also intercepts replace and POP (back/forward)', () => {
+    const h = createMemoryHistory({initialEntries: ['/a', '/b'], initialIndex: 1});
+    const seen: Array<string> = [];
+    h.block((tx) => {
+      seen.push(`${tx.action}:${tx.location.pathname}`);
+    });
+
+    h.replace('/swap');
+    expect(h.location.pathname).toBe('/b');
+
+    h.back();
+    expect(h.location.pathname).toBe('/b');
+    expect(h.index).toBe(1);
+
+    expect(seen).toEqual(['REPLACE:/swap', 'POP:/a']);
+  });
+
+  test('retry performs the pending navigation exactly once, then the blocker re-engages', () => {
+    const h = createMemoryHistory();
+    let calls = 0;
+    h.block((tx) => {
+      calls += 1;
+      if (calls === 1) {
+        tx.retry();
+      }
+      // second call: don't retry — should stay put
+    });
+
+    h.push('/first');
+    expect(h.location.pathname).toBe('/first');
+    expect(calls).toBe(1);
+
+    h.push('/second');
+    expect(h.location.pathname).toBe('/first');
+    expect(calls).toBe(2);
+  });
+
+  test('block returns an unregister function that restores normal navigation', () => {
+    const h = createMemoryHistory();
+    const blocker = vi.fn();
+    const unblock = h.block(blocker);
+
+    unblock();
+    h.push('/free');
+    expect(h.location.pathname).toBe('/free');
+    expect(blocker).not.toHaveBeenCalled();
+  });
+
+  test('registering a new blocker replaces the previous one', () => {
+    const h = createMemoryHistory();
+    const first = vi.fn();
+    const second = vi.fn();
+    h.block(first);
+    h.block(second);
+
+    h.push('/x');
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('createBrowserHistory', () => {
@@ -168,5 +242,29 @@ describe('createBrowserHistory', () => {
     window.dispatchEvent(new PopStateEvent('popstate'));
 
     expect(seen).toEqual(['POP:/popped']);
+  });
+
+  test('block intercepts push and prevents the URL from changing', () => {
+    const h = createBrowserHistory();
+    const transitions: Array<{action: string; pathname: string}> = [];
+    h.block((tx) => {
+      transitions.push({action: tx.action, pathname: tx.location.pathname});
+    });
+
+    h.push('/blocked');
+    expect(window.location.pathname).toBe('/');
+    expect(h.location.pathname).toBe('/');
+    expect(transitions).toEqual([{action: 'PUSH', pathname: '/blocked'}]);
+  });
+
+  test('retry on a blocked push performs the navigation', () => {
+    const h = createBrowserHistory();
+    h.block((tx) => {
+      tx.retry();
+    });
+
+    h.push('/proceed');
+    expect(window.location.pathname).toBe('/proceed');
+    expect(h.location.pathname).toBe('/proceed');
   });
 });

@@ -44,14 +44,14 @@
 import {AssertionError} from 'assert';
 
 import type {ComponentProps, ReactNode, MouseEvent} from 'react';
-import {createContext, use, useSyncExternalStore} from 'react';
+import {createContext, use, useEffect, useRef, useState, useSyncExternalStore} from 'react';
 
 import {buildRoute, isModifiedEvent} from './algo';
-import type {PathParser, Routing, History} from './types';
+import type {HistoryAction, Location, PathParser, Routing, History} from './types';
 
 export {createBrowserHistory, createMemoryHistory} from './history';
 export type {MemoryHistory, MemoryHistoryOptions} from './history';
-export type {History, HistoryAction, Location, To, Update} from './types';
+export type {Blocker, History, HistoryAction, Location, To, Transition, Update} from './types';
 
 type AsOptionalparamsIf<T> = keyof T extends never ? [] : [T];
 
@@ -202,6 +202,63 @@ export function useHistory(): History {
 export function useLocation(): History['location'] {
   const hist = useHistory();
   return useSyncExternalStore(hist.listen, () => hist.location);
+}
+
+export type BlockerFn = (args: {currentLocation: Location; nextLocation: Location; historyAction: HistoryAction}) => boolean;
+
+export type BlockerState =
+  | {state: 'unblocked'; location: null; proceed: null; reset: null}
+  | {state: 'blocked'; location: Location; proceed: () => void; reset: () => void}
+  | {state: 'proceeding'; location: Location; proceed: null; reset: null};
+
+const UNBLOCKED: BlockerState = {state: 'unblocked', location: null, proceed: null, reset: null};
+
+/**
+ * Intercepts navigations while `shouldBlock` is truthy and surfaces a
+ * state machine for confirming or cancelling them.
+ *
+ * Pass `true` (or a function returning `true`) to block; the returned
+ * blocker transitions to `'blocked'` with `proceed` / `reset` callbacks the
+ * caller wires up to a confirmation UI. After `proceed`, the navigation
+ * runs and the blocker goes to `'proceeding'`; `reset` returns to
+ * `'unblocked'`.
+ */
+export function useBlocker(shouldBlock: boolean | BlockerFn): BlockerState {
+  const history = useHistory();
+  const [state, setState] = useState<BlockerState>(UNBLOCKED);
+  const shouldBlockRef = useRef(shouldBlock);
+  shouldBlockRef.current = shouldBlock;
+
+  useEffect(() => {
+    const unblock = history.block((tx) => {
+      const current = shouldBlockRef.current;
+      const should =
+        typeof current === 'function'
+          ? current({currentLocation: history.location, nextLocation: tx.location, historyAction: tx.action})
+          : current;
+      if (!should) {
+        tx.retry();
+        return;
+      }
+      setState({
+        state: 'blocked',
+        location: tx.location,
+        proceed: () => {
+          setState({state: 'proceeding', location: tx.location, proceed: null, reset: null});
+          tx.retry();
+        },
+        reset: () => {
+          setState(UNBLOCKED);
+        },
+      });
+    });
+    return () => {
+      unblock();
+      setState(UNBLOCKED);
+    };
+  }, [history]);
+
+  return state;
 }
 
 type LinkPropsBase<Key extends string> = {

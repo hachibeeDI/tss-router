@@ -1,11 +1,11 @@
-import {act, type ReactNode} from 'react';
+import {act, useState, type ReactNode} from 'react';
 
 import {describe, expect, test, vi} from 'vitest';
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
-import {route, routingHooksFactory, LocationNotFoundError, isLocationNotFoundError, createMemoryHistory} from './index';
+import {route, routingHooksFactory, useBlocker, LocationNotFoundError, isLocationNotFoundError, createMemoryHistory} from './index';
 
 describe('route', () => {
   const router = route('root', '/', () => <div>This is root page</div>)
@@ -446,6 +446,171 @@ describe('Provider boundary', () => {
     });
     expect(() => render(<Probe />)).toThrow(/RouteProvider/);
     errSpy.mockRestore();
+  });
+});
+
+describe('useBlocker', () => {
+  const router = route('home', '/', () => <div>home</div>)
+    .at('about', '/about', () => <div>about</div>)
+    .at('contact', '/contact', () => <div>contact</div>);
+  const {RouteProvider, useRouter, useNavigate, Link} = routingHooksFactory(router);
+
+  function setup(shouldBlock: boolean) {
+    const history = createMemoryHistory();
+
+    function App() {
+      const [dirty, setDirty] = useState(shouldBlock);
+      const blocker = useBlocker(dirty);
+      const view = useRouter();
+      const nav = useNavigate();
+      return (
+        <div>
+          <button type="button" onClick={() => setDirty(false)}>
+            clear dirty
+          </button>
+          <Link route="about">to about</Link>
+          <button type="button" onClick={() => nav('contact')}>
+            nav contact
+          </button>
+          {blocker.state === 'blocked' && (
+            <div>
+              <div>blocked at {blocker.location.pathname}</div>
+              <button type="button" onClick={blocker.proceed}>
+                proceed
+              </button>
+              <button type="button" onClick={blocker.reset}>
+                reset
+              </button>
+            </div>
+          )}
+          {blocker.state === 'proceeding' && <div>proceeding to {blocker.location.pathname}</div>}
+          {view}
+        </div>
+      );
+    }
+
+    render(
+      <RouteProvider history={history}>
+        <App />
+      </RouteProvider>,
+    );
+
+    return {history};
+  }
+
+  test('blocks a Link click and exposes proceed/reset', async () => {
+    const {history} = setup(true);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to about'));
+    });
+
+    expect(history.location.pathname).toBe('/');
+    expect(screen.queryByText('home')).toBeInTheDocument();
+    expect(screen.queryByText('blocked at /about')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('reset'));
+    });
+
+    expect(screen.queryByText(/blocked at/)).not.toBeInTheDocument();
+    expect(history.location.pathname).toBe('/');
+  });
+
+  test('proceed runs the pending navigation', async () => {
+    const {history} = setup(true);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to about'));
+    });
+
+    expect(screen.queryByText('blocked at /about')).toBeInTheDocument();
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('proceed'));
+    });
+
+    expect(history.location.pathname).toBe('/about');
+    expect(screen.queryByText('about')).toBeInTheDocument();
+  });
+
+  test('also blocks programmatic navigation via useNavigate', async () => {
+    const {history} = setup(true);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('nav contact'));
+    });
+
+    expect(history.location.pathname).toBe('/');
+    expect(screen.queryByText('blocked at /contact')).toBeInTheDocument();
+  });
+
+  test('shouldBlock=false lets navigation through', async () => {
+    const {history} = setup(false);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to about'));
+    });
+
+    expect(history.location.pathname).toBe('/about');
+    expect(screen.queryByText(/blocked at/)).not.toBeInTheDocument();
+  });
+
+  test('flipping shouldBlock from true to false unblocks future navigations', async () => {
+    const {history} = setup(true);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('clear dirty'));
+    });
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to about'));
+    });
+
+    expect(history.location.pathname).toBe('/about');
+    expect(screen.queryByText(/blocked at/)).not.toBeInTheDocument();
+  });
+
+  test('predicate form receives current and next location', async () => {
+    const history = createMemoryHistory();
+    const seen: Array<{from: string; to: string; action: string}> = [];
+
+    function App() {
+      useBlocker(({currentLocation, nextLocation, historyAction}) => {
+        seen.push({from: currentLocation.pathname, to: nextLocation.pathname, action: historyAction});
+        // Only block navigation to /about
+        return nextLocation.pathname === '/about';
+      });
+      const view = useRouter();
+      return (
+        <div>
+          <Link route="about">to about</Link>
+          <Link route="contact">to contact</Link>
+          {view}
+        </div>
+      );
+    }
+
+    render(
+      <RouteProvider history={history}>
+        <App />
+      </RouteProvider>,
+    );
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to contact'));
+    });
+    expect(history.location.pathname).toBe('/contact');
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('to about'));
+    });
+    expect(history.location.pathname).toBe('/contact');
+
+    expect(seen).toEqual([
+      {from: '/', to: '/contact', action: 'PUSH'},
+      {from: '/contact', to: '/about', action: 'PUSH'},
+    ]);
   });
 });
 

@@ -45,6 +45,19 @@ export type Update = {
 };
 
 /**
+ * A pending navigation handed to a {@link Blocker}. The transition does not
+ * happen until `retry()` is called; calling it bypasses the active blocker
+ * for exactly that one navigation.
+ */
+export type Transition = {
+  action: HistoryAction;
+  location: Location;
+  retry: () => void;
+};
+
+export type Blocker = (tx: Transition) => void;
+
+/**
  * The minimal surface that the router needs. Implement this directly if you
  * want to plug in a custom history; otherwise use `createBrowserHistory` /
  * `createMemoryHistory` from this package.
@@ -55,6 +68,12 @@ export type History = {
   push: (to: To, state?: unknown) => void;
   replace: (to: To, state?: unknown) => void;
   listen: (listener: (update: Update) => void) => () => void;
+  /**
+   * Register a blocker that intercepts navigations (push/replace and POP from
+   * back/forward). Only one blocker can be active at a time — registering a
+   * new one replaces the previous. Returns an unregister function.
+   */
+  block: (blocker: Blocker) => () => void;
   go: (delta: number) => void;
   back: () => void;
   forward: () => void;
