@@ -149,10 +149,23 @@ Type-safe anchor. Props:
 | `href` | `string` | When provided, renders a plain anchor and ignores routing. |
 | ...rest | `<a>` props | Forwarded as-is. |
 
-### `useNavigate()` / `useRedirect()`
+### `useNavigate(options?)` / `useRedirect(options?)`
 
-Return `(key, params?) => void`. `useNavigate` calls `history.push`;
+```ts
+function useNavigate(): (key, params?) => void;
+function useNavigate(options: {transition: false}): (key, params?) => void;
+function useNavigate(options: {transition: true}): [(key, params?) => void, boolean];
+```
+
+Return a navigation function. `useNavigate` calls `history.push`;
 `useRedirect` calls `history.replace`.
+
+With `{transition: true}`, the navigation is wrapped in React's
+`startTransition` and the hook returns a `[navigate, isPending]` tuple.
+`isPending` stays `true` while any Suspense boundary downstream of the
+new route is still resolving — use it to keep the old UI visible or to
+render a loading indicator. Without the option, the call is synchronous
+and the return value is the plain function.
 
 ## `useLocation()`
 

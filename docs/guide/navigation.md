@@ -75,6 +75,31 @@ If a route has no params, you can call it without the second argument. If it
 has required path params or a `$search` template, TypeScript requires you to
 pass them.
 
+### Concurrent navigation with `transition`
+
+Pass `{transition: true}` to wrap the underlying `history.push` /
+`history.replace` in React's `startTransition`. The hook then returns
+`[navigate, isPending]` instead of a bare function, so you can keep the
+old UI visible (or render a skeleton) while a Suspense-blocking child of
+the new route is resolving.
+
+```tsx
+const [navigate, isPending] = useNavigate({transition: true});
+
+return (
+  <div className={isPending ? 'is-loading' : ''}>
+    <button onClick={() => navigate('user', {id: '123'})}>Open user</button>
+  </div>
+);
+```
+
+`useRedirect({transition: true})` works the same way.
+
+This is intentionally the only Suspense-aware affordance the router
+ships with. Lazy route components and data fetching belong to your code:
+wrap `useRouter()` in your own `<Suspense>` boundary and use
+`React.lazy` / your data layer of choice.
+
 ## Reading the current location
 
 ```ts
