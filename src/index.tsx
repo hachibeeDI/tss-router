@@ -44,7 +44,7 @@
 import {AssertionError} from 'assert';
 
 import type {ComponentProps, ReactNode, MouseEvent} from 'react';
-import {createContext, use, useEffect, useRef, useState, useSyncExternalStore} from 'react';
+import {createContext, use, useEffect, useRef, useState, useSyncExternalStore, useTransition} from 'react';
 
 import {buildRoute, isModifiedEvent} from './algo';
 import type {HistoryAction, Location, PathParser, Routing, History} from './types';
@@ -329,22 +329,40 @@ export function routingHooksFactory<Routings extends Record<string, Routing<stri
     return null;
   }
 
-  function createUseRouteOperation(operation: 'push' | 'replace') {
-    return function useRouteOperation() {
-      const histCtx = useHistory();
+  type NavigateFn = <const Key extends Extract<keyof Routings, string>>(
+    key: Key,
+    ...[params]: AsOptionalparamsIf<PathParser<Routings[Key]['path']>>
+  ) => void;
 
-      return <const Key extends Extract<keyof Routings, string>>(
-        key: Key,
-        ...[params]: AsOptionalparamsIf<PathParser<Routings[Key]['path']>>
-      ): void => {
+  function createUseRouteOperation(operation: 'push' | 'replace') {
+    function useRouteOperation(): NavigateFn;
+    function useRouteOperation(options: {transition: false}): NavigateFn;
+    function useRouteOperation(options: {transition: true}): [NavigateFn, boolean];
+    function useRouteOperation(options?: {transition?: boolean}): NavigateFn | [NavigateFn, boolean] {
+      const histCtx = useHistory();
+      const [isPending, startTransition] = useTransition();
+
+      const navigate: NavigateFn = (key, ...[params]) => {
         const url = router.buildUrl(
           key,
           // Limit of type inference
           (params ?? {}) as any,
         );
-        histCtx[operation](url);
+        if (options?.transition) {
+          startTransition(() => {
+            histCtx[operation](url);
+          });
+        } else {
+          histCtx[operation](url);
+        }
       };
-    };
+
+      if (options?.transition) {
+        return [navigate, isPending];
+      }
+      return navigate;
+    }
+    return useRouteOperation;
   }
 
   function Link<const Key extends Extract<keyof Routings, string>>(props: LinkProps<Routings, Key>) {

@@ -310,6 +310,77 @@ describe('useMatch', () => {
   });
 });
 
+describe('useNavigate — transition option', () => {
+  const router = route('home', '/', () => <div>home</div>).at('about', '/about', () => <div>about</div>);
+  const {RouteProvider, useRouter, useNavigate} = routingHooksFactory(router);
+
+  test('default returns a plain navigate function', async () => {
+    const history = createMemoryHistory();
+
+    function App() {
+      const view = useRouter();
+      const nav = useNavigate();
+      // Compile-time check: nav is a function, not a tuple
+      return (
+        <div>
+          <button type="button" onClick={() => nav('about')}>
+            go
+          </button>
+          {view}
+        </div>
+      );
+    }
+
+    render(
+      <RouteProvider history={history}>
+        <App />
+      </RouteProvider>,
+    );
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('go'));
+    });
+
+    expect(history.location.pathname).toBe('/about');
+  });
+
+  test('transition: true returns a [navigate, isPending] tuple and still navigates', async () => {
+    const history = createMemoryHistory();
+    let renderedIsPending: boolean | null = null;
+
+    function App() {
+      const view = useRouter();
+      const [nav, isPending] = useNavigate({transition: true});
+      renderedIsPending = isPending;
+      return (
+        <div>
+          <span>pending={isPending ? 'yes' : 'no'}</span>
+          <button type="button" onClick={() => nav('about')}>
+            go
+          </button>
+          {view}
+        </div>
+      );
+    }
+
+    render(
+      <RouteProvider history={history}>
+        <App />
+      </RouteProvider>,
+    );
+
+    expect(renderedIsPending).toBe(false);
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('go'));
+    });
+
+    expect(history.location.pathname).toBe('/about');
+    // After the transition settles (no async work pending), isPending returns to false
+    expect(renderedIsPending).toBe(false);
+  });
+});
+
 describe('useRedirect', () => {
   test('replaces the current entry without growing history', async () => {
     const router = route('home', '/', () => <div>home</div>).at('about', '/about', () => <div>about</div>);
